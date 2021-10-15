@@ -47,6 +47,7 @@ class BRVFL:
         
         h = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
         d = np.concatenate([h, data], axis=1)
+        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         # print('Shape of D:', np.shape(d))
         y = self.one_hot_encoding(label, n_class)
         # print('Shape of y:', np.shape(y))
@@ -59,7 +60,7 @@ class BRVFL:
         with model:
             p = pm.Gamma('p', alpha=self.alpha_1, beta=self.alpha_2)
             v = pm.Gamma('v', alpha=self.alpha_3, beta=self.alpha_4)
-            b = pm.Normal('b', mu=0, tau=p, shape=(n_feature + self.n_node, n_class))
+            b = pm.Normal('b', mu=0, tau=p, shape=(n_feature + self.n_node + 1, n_class))
             y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
         
         map_estimate =  pm.find_MAP(model=model)
@@ -96,8 +97,8 @@ class BRVFL:
         # update posterior covariance
         self.covar = np.linalg.inv(self.prec * np.identity(dT_d.shape[1]) + dT_d / self.var)
         # update posterior mean
-        self.mean = np.dot(self.covar, dT_y) / self.var
-
+        self.beta = np.dot(self.covar, dT_y) / self.var
+        # print('beta: ', np.shape(self.beta))
         # print('Posterior mean: ', self.mean)
         # print('Posterior covariance: ', self.covar)
         # print('Precision: ', self.prec)
@@ -107,6 +108,7 @@ class BRVFL:
         data = self.standardize(data) # Normalize
         h = self.activation_function(np.dot(data, self.weight) + self.bias)
         d = np.concatenate([h, data], axis=1)
+        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -120,6 +122,7 @@ class BRVFL:
         data = self.standardize(data)  # Normalize
         h = self.activation_function(np.dot(data, self.weight) + self.bias)
         d = np.concatenate([h, data], axis=1)
+        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = np.dot(d, self.beta)
         result = np.argmax(result, axis=1)
         acc = np.sum(np.equal(result, label))/len(label)

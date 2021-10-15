@@ -41,7 +41,7 @@ class RVFL:
         h = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
         d = np.concatenate([h, data], axis=1)
         # print('Shape of D:', np.shape(d))
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
+        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         # print('Shape of D:', np.shape(d))
         y = self.one_hot_encoding(label, n_class)
         # print('Shape of y:', np.shape(y))
@@ -56,7 +56,7 @@ class RVFL:
         data = self.standardize(data) # Normalize
         h = self.activation_function(np.dot(data, self.weight) + self.bias)
         d = np.concatenate([h, data], axis=1)
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
+        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -70,7 +70,7 @@ class RVFL:
         data = self.standardize(data)  # Normalize
         h = self.activation_function(np.dot(data, self.weight) + self.bias)
         d = np.concatenate([h, data], axis=1)
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
+        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = np.dot(d, self.beta)
         result = np.argmax(result, axis=1)
         acc = np.sum(np.equal(result, label))/len(label)
