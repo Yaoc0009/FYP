@@ -11,5 +11,6 @@ Most files are experimentation files - not functioning/irrelevant for now, will 
 Roadmap:
 1. RVFL ✅
 2. BRVFL ✅
-3. BRVFL + MR ⬜
-4. SP-RVFL, dRVFL, edRVFL + BI + MR ⬜
+3. Variational BRVFL ⬜
+4. BRVFL + MR ⬜
+5. SP-RVFL, dRVFL, edRVFL + BI + MR ⬜
