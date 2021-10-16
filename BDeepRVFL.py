@@ -31,8 +31,6 @@ class BayesianDeepRVFL:
         self.var = None
         a = Activation()
         self.activation_function = getattr(a, activation)
-        self.covar = None
-        self.mean = None
         self.data_std = [None] * self.n_layer
         self.data_mean = [None] * self.n_layer
         self.same_feature = same_feature
@@ -52,7 +50,7 @@ class BayesianDeepRVFL:
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, d], axis=1)
 
-        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
         dT_y = np.dot(d.T, y)
         dT_d = np.dot(d.T, d)
@@ -68,44 +66,35 @@ class BayesianDeepRVFL:
         
         map_estimate =  pm.find_MAP(model=model)
         self.prec, self.var, self.beta = map_estimate['p'].item(0), map_estimate['v'].item(0), map_estimate['b']
-        # print('Initialized parameters:')
-        # print('precision: ', self.prec)
-        # print('variance: ', self.var)
-        # print('beta: ', self.beta)
 
         # Iterate to meet convergence criteria
         mean_prev = None
         for iter_ in range(self.n_iter):
             # Posterior update
             # update posterior covariance
-            self.covar = np.linalg.inv(self.prec * np.identity(dT_d.shape[1]) + dT_d / self.var)
+            covar = np.linalg.inv(self.prec * np.identity(dT_d.shape[1]) + dT_d / self.var)
             # update posterior mean
-            self.mean = np.dot(self.covar, dT_y) / self.var
+            mean = np.dot(covar, dT_y) / self.var
 
             # Hyperparameters update
             # update eigenvalues
             lam = eigen_val / self.var
             # update precision and variance 
             delta = np.sum(np.divide(lam, lam + self.prec))
-            self.prec = (delta + 2 * self.alpha_1) / (np.sum(np.square(self.mean)) + 2 * self.alpha_2)
+            self.prec = (delta + 2 * self.alpha_1) / (np.sum(np.square(mean)) + 2 * self.alpha_2)
             self.var = (np.sum(np.square(y - np.dot(d, self.beta))) + self.alpha_4) / (n_sample + delta + 2 * self.alpha_3)
 
             # Check for convergence
-            if iter_ != 0 and np.sum(np.abs(mean_prev - self.mean)) < self.tol:
+            if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
                 print("Convergence after ", str(iter_), " iterations")
                 break
-            mean_prev = np.copy(self.mean)
+            mean_prev = np.copy(mean)
 
         # Final Posterior update
         # update posterior covariance
-        self.covar = np.linalg.inv(self.prec * np.identity(dT_d.shape[1]) + dT_d / self.var)
+        covar = np.linalg.inv(self.prec * np.identity(d.shape[1]) + dT_d / self.var)
         # update posterior mean
-        self.beta = np.dot(self.covar, dT_y) / self.var
-        # print('beta: ', np.shape(self.beta))
-        # print('Posterior mean: ', self.mean)
-        # print('Posterior covariance: ', self.covar)
-        # print('Precision: ', self.prec)
-        # print('Variance: ', self.var)
+        self.beta = np.dot(covar, dT_y) / self.var
 
     def predict(self, data, raw_output=False):
         n_sample = len(data)
@@ -116,7 +105,7 @@ class BayesianDeepRVFL:
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, d], axis=1)
 
-        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -185,18 +174,18 @@ if __name__=="__main__":
         train_index, val_index = kf_values
         X_val_train, X_val_test = X_train[train_index], X_train[val_index]
         y_val_train, y_val_test = y_train[train_index], y_train[val_index]
-        bdrvfl = BayesianDeepRVFL(n_node, w_range, b_range, n_layer)
-        bdrvfl.train(X_val_train, y_val_train, n_class)
-        prediction = bdrvfl.predict(X_val_test, True)
-        acc = bdrvfl.eval(X_val_test, y_val_test)
+        model = BayesianDeepRVFL(n_node, w_range, b_range, n_layer)
+        model.train(X_val_train, y_val_train, n_class)
+        prediction = model.predict(X_val_test, True)
+        acc = model.eval(X_val_test, y_val_test)
         print(f'Validation accuracy: {acc}')
         val_acc.append(acc)
         if acc >= max(val_acc):
             max_index = train_index
 
     X_train, y_train = X_train[max_index], y_train[max_index]
-    bdrvfl = BayesianDeepRVFL(n_node, w_range, b_range, n_layer)
-    bdrvfl.train(X_train, y_train, n_class)
-    prediction = bdrvfl.predict(X_test, True)
-    acc = bdrvfl.eval(X_test, y_test)
+    model = BayesianDeepRVFL(n_node, w_range, b_range, n_layer)
+    model.train(X_train, y_train, n_class)
+    prediction = model.predict(X_test, True)
+    acc = model.eval(X_test, y_test)
     print(f'\nTest accuracy: {acc}')

@@ -10,7 +10,7 @@ b_range = [0, 1] # range of random biases
 class BRVFL:
     """ BRVFL Classifier """
 
-    def __init__(self, n_node, w_range, b_range, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='relu'):
+    def __init__(self, n_node, w_range, b_range, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='relu', same_feature=False):
         self.n_node = n_node
         self.w_range = w_range
         self.b_range = b_range
@@ -29,8 +29,9 @@ class BRVFL:
         self.var = None
         a = Activation()
         self.activation_function = getattr(a, activation)
-        self.covar = None
-        self.mean = None
+        self.data_std = None
+        self.data_mean = None
+        self.same_feature = same_feature
 
     def train(self, data, label, n_class):
         assert len(data.shape) > 1
@@ -38,19 +39,14 @@ class BRVFL:
         assert len(label.shape) == 1
 
         data = self.standardize(data)
-        # print('Shape of data:', np.shape(data))
         n_sample, n_feature = np.shape(data)
         self.weight = (self.w_range[1] - self.w_range[0]) * np.random.random([n_feature, self.n_node]) + self.w_range[0]
         self.bias = (self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0]
-        # print('Shape of weights:', np.shape(self.weight))
-        # print('Shape of bias:', np.shape(self.bias))
         
         h = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
         d = np.concatenate([h, data], axis=1)
-        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
-        # print('Shape of D:', np.shape(d))
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         y = self.one_hot_encoding(label, n_class)
-        # print('Shape of y:', np.shape(y))
         dT_y = np.dot(d.T, y)
         dT_d = np.dot(d.T, d)
         eigen_val = np.linalg.eigvalsh(dT_d)
@@ -60,55 +56,46 @@ class BRVFL:
         with model:
             p = pm.Gamma('p', alpha=self.alpha_1, beta=self.alpha_2)
             v = pm.Gamma('v', alpha=self.alpha_3, beta=self.alpha_4)
-            b = pm.Normal('b', mu=0, tau=p, shape=(n_feature + self.n_node + 1, n_class))
+            b = pm.Normal('b', mu=0, tau=p, shape=(len(d[0]), n_class))
             y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
         
         map_estimate =  pm.find_MAP(model=model)
         self.prec, self.var, self.beta = map_estimate['p'].item(0), map_estimate['v'].item(0), map_estimate['b']
-        # print('Initialized parameters:')
-        # print('precision: ', self.prec)
-        # print('variance: ', self.var)
-        # print('beta: ', self.beta)
 
         # Iterate to meet convergence criteria
         mean_prev = None
         for iter_ in range(self.n_iter):
             # Posterior update
             # update posterior covariance
-            self.covar = np.linalg.inv(self.prec * np.identity(dT_d.shape[1]) + dT_d / self.var)
+            covar = np.linalg.inv(self.prec * np.identity(dT_d.shape[1]) + dT_d / self.var)
             # update posterior mean
-            self.mean = np.dot(self.covar, dT_y) / self.var
+            mean = np.dot(covar, dT_y) / self.var
 
             # Hyperparameters update
             # update eigenvalues
             lam = eigen_val / self.var
             # update precision and variance 
             delta = np.sum(np.divide(lam, lam + self.prec))
-            self.prec = (delta + 2 * self.alpha_1) / (np.sum(np.square(self.mean)) + 2 * self.alpha_2)
+            self.prec = (delta + 2 * self.alpha_1) / (np.sum(np.square(mean)) + 2 * self.alpha_2)
             self.var = (np.sum(np.square(y - np.dot(d, self.beta))) + self.alpha_4) / (n_sample + delta + 2 * self.alpha_3)
 
             # Check for convergence
-            if iter_ != 0 and np.sum(np.abs(mean_prev - self.mean)) < self.tol:
+            if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
                 print("Convergence after ", str(iter_), " iterations")
                 break
-            mean_prev = np.copy(self.mean)
+            mean_prev = np.copy(mean)
 
         # Final Posterior update
         # update posterior covariance
-        self.covar = np.linalg.inv(self.prec * np.identity(dT_d.shape[1]) + dT_d / self.var)
+        covar = np.linalg.inv(self.prec * np.identity(dT_d.shape[1]) + dT_d / self.var)
         # update posterior mean
-        self.beta = np.dot(self.covar, dT_y) / self.var
-        # print('beta: ', np.shape(self.beta))
-        # print('Posterior mean: ', self.mean)
-        # print('Posterior covariance: ', self.covar)
-        # print('Precision: ', self.prec)
-        # print('Variance: ', self.var)
+        self.beta = np.dot(covar, dT_y) / self.var
 
     def predict(self, data, raw_output=False):
         data = self.standardize(data) # Normalize
         h = self.activation_function(np.dot(data, self.weight) + self.bias)
         d = np.concatenate([h, data], axis=1)
-        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -119,12 +106,7 @@ class BRVFL:
         assert len(data) == len(label)
         assert len(label.shape) == 1
         
-        data = self.standardize(data)  # Normalize
-        h = self.activation_function(np.dot(data, self.weight) + self.bias)
-        d = np.concatenate([h, data], axis=1)
-        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
-        result = np.dot(d, self.beta)
-        result = np.argmax(result, axis=1)
+        result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
         return acc
 
@@ -135,9 +117,18 @@ class BRVFL:
         return y
 
     def standardize(self, x):
-        std = np.maximum(np.std(x, axis=0), 1/np.sqrt(len(x)))
-        mean = np.mean(x, axis=0)
-        return (x - mean) / std
+        if self.same_feature is True:
+            if self.data_std is None:
+                self.data_std = np.maximum(np.std(x), 1/np.sqrt(len(x)))
+            if self.data_mean is None:
+                self.data_mean = np.mean(x)
+            return (x - self.data_mean) / self.data_std
+        else:
+            if self.data_std is None:
+                self.data_std = np.maximum(np.std(x, axis=0), 1/np.sqrt(len(x)))
+            if self.data_mean is None:
+                self.data_mean = np.mean(x, axis=0)
+            return (x - self.data_mean) / self.data_std
 
     def softmax(self, x):
         return np.exp(x) / np.repeat((np.sum(np.exp(x), axis=1))[:, np.newaxis], len(x[0]), axis=1)
