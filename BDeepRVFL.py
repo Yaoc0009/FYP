@@ -160,7 +160,7 @@ if __name__=="__main__":
     dataset = loadmat('coil20.mat')
     label = np.array([dataset['Y'][i][0] - 1 for i in range(len(dataset['Y']))])
     data = dataset['X']
-    n_class = 20
+    n_class = len(np.unique(label))
 
     # train-test-split
     X_train, X_test, y_train, y_test = train_test_split(data, label, test_size=0.2, random_state=42)
