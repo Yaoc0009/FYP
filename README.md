@@ -1,5 +1,5 @@
-# FYP
-## BRVFL-MR Classifier
+# FYP - BRVFL-MR Classifier
+## Manifold-based Bayesian RVFL neural networks for solving Semi-Supervised Classification problems
 
 References: <br>
 1. S. Scardapane, D. Wang and A. Uncini, "Bayesian Random Vector Functional-Link Networks for Robust Data Modeling," in IEEE Transactions on Cybernetics, vol. 48, no. 7, pp. 2049-2059, July 2018, doi: 10.1109/TCYB.2017.2726143.
