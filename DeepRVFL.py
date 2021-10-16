@@ -69,16 +69,7 @@ class DeepRVFL:
         assert len(data) == len(label)
         assert len(label.shape) == 1
         
-        n_sample = len(data)
-        d = self.standardize(data, 0)  # Normalize
-        h = data.copy()
-        for i in range(self.n_layer):
-            h = self.standardize(h, i)
-            h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
-            d = np.concatenate([h, d], axis=1)
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
-        result = np.dot(d, self.beta)
-        result = np.argmax(result, axis=1)
+        result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
         return acc
         

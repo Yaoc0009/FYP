@@ -195,7 +195,6 @@ if __name__=="__main__":
             max_index = train_index
 
     X_train, y_train = X_train[max_index], y_train[max_index]
-    print(np.shape(X_train))
     bdrvfl = BayesianDeepRVFL(n_node, w_range, b_range, n_layer)
     bdrvfl.train(X_train, y_train, n_class)
     prediction = bdrvfl.predict(X_test, True)

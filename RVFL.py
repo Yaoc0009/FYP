@@ -67,12 +67,7 @@ class RVFL:
         assert len(data) == len(label)
         assert len(label.shape) == 1
         
-        data = self.standardize(data)  # Normalize
-        h = self.activation_function(np.dot(data, self.weight) + self.bias)
-        d = np.concatenate([h, data], axis=1)
-        # d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
-        result = np.dot(d, self.beta)
-        result = np.argmax(result, axis=1)
+        result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
         return acc
         
