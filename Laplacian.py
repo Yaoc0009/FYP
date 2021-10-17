@@ -1,21 +1,29 @@
 import numpy as np
 from scipy.io import loadmat
 from scipy import sparse
-from sklearn.neighbors import kneighbors_graph
+from sklearn.neighbors import kneighbors_graph, NearestNeighbors
 import matplotlib.pyplot as plt
 
 # calculates normalized Laplacian
-def Laplacian(data, k=10, sigma=1):
-    knn_dist_graph = kneighbors_graph(X=data,
-                                    n_neighbors=k,
-                                    mode='distance',
-                                    metric='euclidean',
-                                    n_jobs=6)
+def Laplacian(data, k, sigma=1):
+    def gaussian(x, sigma):
+        denom = 2.0*(sigma**2.0)
+        E = np.exp(-(x**2.0)/denom)
+        return E
+        
+    func = np.vectorize(gaussian, excluded=['sigma'])
+    NN = NearestNeighbors(n_neighbors=k,
+                          algorithm='auto',
+                          metric='euclidean',
+                          n_jobs= 1) # setting jobs higher might be faster,
+                                     # though it might also cause isses with
+                                     # determinism?
+    NN.fit(data)
 
-    W = sparse.csr_matrix(knn_dist_graph.shape)
-    nonzeroindices = knn_dist_graph.nonzero()
-    W[nonzeroindices] = np.exp(-np.asarray(knn_dist_graph[nonzeroindices])**2 / 2.0 * sigma**2)
-    W = 0.5 * (W + W.T)
+    W = NN.kneighbors_graph(mode='distance')
+    actual_sigma = W[W != 0].std()
+    W[W != 0] = func(W[W != 0], actual_sigma)
+
     components = W.sum(axis=1)
     DPM_components = np.power(components, -0.5)
 
@@ -29,5 +37,5 @@ def Laplacian(data, k=10, sigma=1):
 if __name__ == "__main__":
     dataset = loadmat('coil20.mat')
     data = dataset['X']
-    k = 10
+    k = 2
     L = Laplacian(data, k)
