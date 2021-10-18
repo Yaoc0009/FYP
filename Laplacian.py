@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.io import loadmat
-from scipy import sparse
-from sklearn.neighbors import kneighbors_graph, NearestNeighbors
+from sklearn.neighbors import NearestNeighbors
 import matplotlib.pyplot as plt
 
 # calculates normalized Laplacian
@@ -15,9 +14,7 @@ def Laplacian(data, k, sigma=1):
     NN = NearestNeighbors(n_neighbors=k,
                           algorithm='auto',
                           metric='euclidean',
-                          n_jobs= 1) # setting jobs higher might be faster,
-                                     # though it might also cause isses with
-                                     # determinism?
+                          n_jobs= 1)
     NN.fit(data)
 
     W = NN.kneighbors_graph(mode='distance')
