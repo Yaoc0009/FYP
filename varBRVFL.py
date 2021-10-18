@@ -3,6 +3,7 @@ from sklearn.model_selection import train_test_split, KFold
 from scipy.io import loadmat
 import pymc3 as pm
 import theano.tensor as T
+import matplotlib.pyplot as plt
 
 n_node = 10 # num of nodes in hidden layer
 w_range = [-1, 1] # range of random weights
@@ -58,23 +59,33 @@ class VariationalBRVFL:
             weights =pm.Normal('weights', mu=0, tau=1, shape=(n_feature, self.n_node))
             precision = pm.Gamma('precision', alpha=self.alpha_1, beta=self.alpha_2)
             variance = pm.Gamma('variance', alpha=self.alpha_3, beta=self.alpha_4)
-            beta = pm.Normal('beta', mu=0, tau=precision, shape=(np.shape(data)[1]+self.n_node+1, n_class))
+            beta = pm.Normal('beta', mu=0, tau=precision, shape=(n_feature+self.n_node+1, n_class))
             y_obs = pm.Normal('y_obs', mu=self.kernel(data, beta, weights, bias), tau=variance, observed=y)
             start = pm.find_MAP()
-            approx=pm.fit(self.n_iter, start=start, obj_optimizer=pm.adam())
-            trace = pm.sample_approx(approx=approx, draws=5000)
+            inference = pm.ADVI()
+            approx = pm.fit(n=self.n_iter, start=start, method=inference)
+            trace = approx.sample(draws=5000)
             pm.traceplot(trace)
             pm.summary(trace)
-            post_pred = pm.sample_ppc(trace, samples=5000, model=self.model)
-            y_train_pred = np.mean(post_pred['y_obs'], axis=0)
-            result_train = np.argmax(y_train_pred, axis=1)
-            train_acc = np.sum(np.equal(result_train, label))/len(label)
-            data.set_value(test_data)
-            post_pred = pm.sample_ppc(trace, samples=5000, model=self.model)
-            y_test_pred = np.mean(post_pred['y_obs'], axis=0)
-            result_test = np.argmax(y_test_pred, axis=1)
-            test_acc = np.sum(np.equal(result_test, test_label))/len(test_label)
-            return train_acc, test_acc
+        
+        plt.plot(-inference.hist, label="new ADVI", alpha=0.3)
+        plt.plot(approx.hist, label="old ADVI", alpha=0.3)
+        plt.legend()
+        plt.ylabel("ELBO")
+        plt.xlabel("iteration")
+            # trace = pm.sample_approx(approx=approx, draws=5000)
+            # pm.traceplot(trace)
+            # pm.summary(trace)
+            # post_pred = pm.sample_ppc(trace, samples=5000, model=self.model)
+            # y_train_pred = np.mean(post_pred['y_obs'], axis=0)
+            # result_train = np.argmax(y_train_pred, axis=1)
+            # train_acc = np.sum(np.equal(result_train, label))/len(label)
+            # data.set_value(test_data)
+            # post_pred = pm.sample_ppc(trace, samples=5000, model=self.model)
+            # y_test_pred = np.mean(post_pred['y_obs'], axis=0)
+            # result_test = np.argmax(y_test_pred, axis=1)
+            # test_acc = np.sum(np.equal(result_test, test_label))/len(test_label)
+            # return train_acc, test_acc
 
     def predict(self, data, raw_output=False):
         data = self.standardize(data) # Normalize
