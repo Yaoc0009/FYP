@@ -65,8 +65,6 @@ class VariationalBRVFL:
             inference = pm.ADVI()
             approx = pm.fit(n=self.n_iter, start=start, method=inference)
             trace = approx.sample(draws=5000)
-            pm.traceplot(trace)
-            pm.summary(trace)
         
         plt.plot(-inference.hist, label="new ADVI", alpha=0.3)
         plt.plot(approx.hist, label="old ADVI", alpha=0.3)
