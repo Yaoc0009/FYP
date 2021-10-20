@@ -163,8 +163,8 @@ if __name__=="__main__":
     n_class = len(np.unique(label))
 
     # train-test-split
-    X_train, X_test, y_train, y_test = train_test_split(data, label, test_size=0.2, random_state=42)
-    kf = KFold(n_splits=10, shuffle=True, random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(data, label, test_size=0.2)
+    kf = KFold(n_splits=10, shuffle=True)
     val_acc = []
     max_index = -1
     
