@@ -44,8 +44,9 @@ class Activation:
 class RVFL(Model):
     """ RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, activation='relu', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, n_layer=1, activation='sigmoid', same_feature=False):
         self.n_node = n_node
+        self.n_layer = n_layer
         self.lam = lam
         self.w_range = w_range
         self.b_range = b_range
@@ -101,7 +102,7 @@ class RVFL(Model):
 class DeepRVFL(Model):
     """ Deep RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='relu', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
         self.n_node = n_node
         self.lam = lam
         self.w_range = w_range
@@ -180,7 +181,7 @@ class DeepRVFL(Model):
 class EnsembleDeepRVFL(Model):
     """ Ensemble Deep RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='relu', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
         self.n_node = n_node
         self.lam = lam
         self.w_range = w_range
@@ -205,6 +206,7 @@ class EnsembleDeepRVFL(Model):
         h = data.copy()
         y = self.one_hot_encoding(label, n_class)
         for i in range(self.n_layer):
+            print(self.lam, i)
             h = self.standardize(h, i)
             self.weight.append((self.w_range[1] - self.w_range[0]) * np.random.random([len(h[0]), self.n_node]) + self.w_range[0])
             self.bias.append((self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0])
@@ -267,10 +269,11 @@ class EnsembleDeepRVFL(Model):
 class BRVFL(Model):
     """ BRVFL Classifier """
 
-    def __init__(self, n_node, w_range, b_range, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='relu', same_feature=False):
+    def __init__(self, n_node, w_range, b_range, n_layer=1, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
         self.n_node = n_node
         self.w_range = w_range
         self.b_range = b_range
+        self.n_layer = n_layer
         
         self.alpha_1 = alpha_1 # Gamma distribution parameter
         self.alpha_2 = alpha_2
@@ -367,10 +370,10 @@ class BRVFL(Model):
         acc = np.sum(np.equal(result, label))/len(label)
         return acc
 
-class BayesianDeepRVFL(Model):
+class BDeepRVFL(Model):
     """ Bayesian Deep RVFL Classifier """
 
-    def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='relu', same_feature=False):
+    def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
         self.n_node = n_node
         self.w_range = w_range
         self.b_range = b_range
@@ -493,10 +496,10 @@ class BayesianDeepRVFL(Model):
                 self.data_mean[index] = np.mean(x, axis=0)
             return (x - self.data_mean[index]) / self.data_std[index]
 
-class BayesianEnsembleDeepRVFL(Model):
+class BEnsembleDeepRVFL(Model):
     """ Bayesian Deep RVFL Classifier """
 
-    def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='relu', same_feature=False):
+    def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
         self.n_node = n_node
         self.w_range = w_range
         self.b_range = b_range
@@ -542,18 +545,22 @@ class BayesianEnsembleDeepRVFL(Model):
             dT_d = np.dot(d.T, d)
             eigen_val = np.linalg.eigvalsh(dT_d)
 
-            # Initialize variance and precision using Evidence approximation
-            model = pm.Model()
-            with model:
-                p = pm.Gamma('p', alpha=self.alpha_1, beta=self.alpha_2)
-                v = pm.Gamma('v', alpha=self.alpha_3, beta=self.alpha_4)
-                b = pm.Normal('b', mu=0, tau=p, shape=(len(d[0]), n_class))
-                y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
+            # initial map estimate 
+            if i == 0:
+                # Initialize variance and precision using Evidence approximation
+                model = pm.Model()
+                with model:
+                    p = pm.Gamma('p', alpha=self.alpha_1, beta=self.alpha_2)
+                    v = pm.Gamma('v', alpha=self.alpha_3, beta=self.alpha_4)
+                    b = pm.Normal('b', mu=0, tau=p, shape=(len(d[0]), n_class))
+                    y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
+                
+                map_estimate =  pm.find_MAP(model=model)
+                # Set map estimate of prec, var, beta as initial value for each model in the ensemble
+                self.prec = [map_estimate['p'].item(0) for _ in range(len(self.n_layer))]
+                self.var = [map_estimate['v'].item(0) for _ in range(len(self.n_layer))]
+                self.beta = [map_estimate['b'] for _ in range(len(self.n_layer))]
             
-            map_estimate =  pm.find_MAP(model=model)
-            self.prec.append(map_estimate['p'].item(0))
-            self.var.append(map_estimate['v'].item(0))
-            self.beta.append(map_estimate['b'])
             # Iterate to meet convergence criteria
             mean_prev = None
             for iter_ in range(self.n_iter):
