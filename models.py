@@ -557,9 +557,9 @@ class BEnsembleDeepRVFL(Model):
                 
                 map_estimate =  pm.find_MAP(model=model)
                 # Set map estimate of prec, var, beta as initial value for each model in the ensemble
-                self.prec = [map_estimate['p'].item(0) for _ in range(len(self.n_layer))]
-                self.var = [map_estimate['v'].item(0) for _ in range(len(self.n_layer))]
-                self.beta = [map_estimate['b'] for _ in range(len(self.n_layer))]
+                self.prec = [map_estimate['p'].item(0) for _ in range(self.n_layer)]
+                self.var = [map_estimate['v'].item(0) for _ in range(self.n_layer)]
+                self.beta = [map_estimate['b'] for _ in range(self.n_layer)]
             
             # Iterate to meet convergence criteria
             mean_prev = None
