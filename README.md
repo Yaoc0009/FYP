@@ -13,4 +13,6 @@ Roadmap:
 2. BRVFL ✅
 3. Variational BRVFL ⬜
 4. BRVFL + MR ⬜
-5. SP-RVFL, dRVFL, edRVFL + BI + MR ⬜
+5. SP-RVFL, dRVFL, edRVFL + BI ✅
+6. SP-RVFL, dRVFL, edRVFL + MR ⬜
+7. SP-RVFL, dRVFL, edRVFL + BI + MR ⬜
