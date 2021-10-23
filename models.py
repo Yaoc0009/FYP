@@ -206,7 +206,6 @@ class EnsembleDeepRVFL(Model):
         h = data.copy()
         y = self.one_hot_encoding(label, n_class)
         for i in range(self.n_layer):
-            print(self.lam, i)
             h = self.standardize(h, i)
             self.weight.append((self.w_range[1] - self.w_range[0]) * np.random.random([len(h[0]), self.n_node]) + self.w_range[0])
             self.bias.append((self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0])
