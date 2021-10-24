@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.io import loadmat
-from sklearn.neighbors import NearestNeighbors
+from scipy import sparse
+from sklearn.neighbors import NearestNeighbors, kneighbors_graph
 import matplotlib.pyplot as plt
 
 # calculates normalized Laplacian
@@ -30,6 +31,27 @@ def Laplacian(data, k, sigma=1):
     DLD = np.linalg.multi_dot([DPM, L, DPM])
 
     return DLD
+
+def Laplacian2():
+    n_neighbors = 10
+    knn_dist_graph = kneighbors_graph(X=data,
+                                    n_neighbors=n_neighbors,
+                                    mode='distance',
+                                    metric='euclidean',
+                                    n_jobs=1)
+
+    sigma = 1
+    similarity_graph = sparse.csr_matrix(knn_dist_graph.shape)
+    nonzeroindices = knn_dist_graph.nonzero()
+
+    similarity_graph[nonzeroindices] = np.exp(-np.asarray(knn_dist_graph[nonzeroindices])**2 / 2.0 * sigma**2)
+
+    similarity_graph = 0.5 * (similarity_graph + similarity_graph.T)
+
+    degree_matrix = similarity_graph.sum(axis=1)
+    diagonal_matrix = np.diag(np.asarray(degree_matrix).reshape(len(data),))
+
+    L =  diagonal_matrix - similarity_graph
 
 if __name__ == "__main__":
     dataset = loadmat('coil20.mat')
