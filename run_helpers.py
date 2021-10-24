@@ -1,11 +1,12 @@
 from sklearn.model_selection import KFold
 import numpy as np
-from models import *
+from models_MR import *
 from time import time
 
 # set random seed
 np.random.seed(42)
 
+# hyperparameters
 lams = [2**i for i in range(-6, 13, 2)] # regularization parameter, lambda
 
 def cross_val_acc(data, label, n_class, model_class, lam=None, n_layer=1, activation='sigmoid'):
