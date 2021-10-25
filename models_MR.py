@@ -62,7 +62,7 @@ class Activation:
     def relu(self, x):
         return np.maximum(0, x)
 
-class RVFL(Model):
+class LapRVFL(Model):
     """ RVFL Classifier """
     
     def __init__(self, n_node, lam, w_range, b_range, n_layer=1, activation='sigmoid', same_feature=False):
@@ -118,7 +118,7 @@ class RVFL(Model):
         acc = np.sum(np.equal(result, label))/len(label)
         return acc
 
-class DeepRVFL(Model):
+class LapDeepRVFL(Model):
     """ Deep RVFL Classifier """
     
     def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
@@ -195,7 +195,7 @@ class DeepRVFL(Model):
                 self.data_mean[index] = np.mean(x, axis=0)
             return (x - self.data_mean[index]) / self.data_std[index]
         
-class EnsembleDeepRVFL(Model):
+class LapEnsembleDeepRVFL(Model):
     """ Ensemble Deep RVFL Classifier """
     
     def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
@@ -279,7 +279,7 @@ class EnsembleDeepRVFL(Model):
                 self.data_mean[index] = np.mean(x, axis=0)
             return (x - self.data_mean[index]) / self.data_std[index]
 
-class BRVFL(Model):
+class BLapRVFL(Model):
     """ BRVFL Classifier """
 
     def __init__(self, n_node, w_range, b_range, n_layer=1, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
@@ -332,7 +332,7 @@ class BRVFL(Model):
             b = pm.Normal('b', mu=0, tau=p, shape=(len(d[0]), n_class))
             y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
         
-        map_estimate =  pm.find_MAP(model=model)
+        map_estimate =  pm.find_MAP(model=model, progressbar=False)
         self.prec, self.var, self.beta = map_estimate['p'].item(0), map_estimate['v'].item(0), map_estimate['b']
 
         # Iterate to meet convergence criteria
@@ -354,7 +354,7 @@ class BRVFL(Model):
 
             # Check for convergence
             if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                print("Convergence after ", str(iter_), " iterations")
+                print(" Convergence after ", str(iter_), " iterations", end='')
                 break
             mean_prev = np.copy(mean)
 
@@ -383,7 +383,7 @@ class BRVFL(Model):
         acc = np.sum(np.equal(result, label))/len(label)
         return acc
 
-class BDeepRVFL(Model):
+class BLapDeepRVFL(Model):
     """ Bayesian Deep RVFL Classifier """
 
     def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
@@ -439,7 +439,7 @@ class BDeepRVFL(Model):
             b = pm.Normal('b', mu=0, tau=p, shape=(len(d[0]), n_class))
             y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
         
-        map_estimate =  pm.find_MAP(model=model)
+        map_estimate =  pm.find_MAP(model=model, progressbar=False)
         self.prec, self.var, self.beta = map_estimate['p'].item(0), map_estimate['v'].item(0), map_estimate['b']
 
         # Iterate to meet convergence criteria
@@ -461,7 +461,7 @@ class BDeepRVFL(Model):
 
             # Check for convergence
             if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                print("Convergence after ", str(iter_), " iterations")
+                print(" Convergence after ", str(iter_), " iterations", end='')
                 break
             mean_prev = np.copy(mean)
 
@@ -509,7 +509,7 @@ class BDeepRVFL(Model):
                 self.data_mean[index] = np.mean(x, axis=0)
             return (x - self.data_mean[index]) / self.data_std[index]
 
-class BEnsembleDeepRVFL(Model):
+class BLapEnsembleDeepRVFL(Model):
     """ Bayesian Deep RVFL Classifier """
 
     def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
@@ -568,7 +568,7 @@ class BEnsembleDeepRVFL(Model):
                     b = pm.Normal('b', mu=0, tau=p, shape=(len(d[0]), n_class))
                     y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
                 
-                map_estimate =  pm.find_MAP(model=model)
+                map_estimate =  pm.find_MAP(model=model, progressbar=False)
                 # Set map estimate of prec, var, beta as initial value for each model in the ensemble
                 self.prec = [map_estimate['p'].item(0) for _ in range(self.n_layer)]
                 self.var = [map_estimate['v'].item(0) for _ in range(self.n_layer)]
@@ -593,7 +593,7 @@ class BEnsembleDeepRVFL(Model):
 
                 # Check for convergence
                 if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                    print("Convergence after ", str(iter_), " iterations")
+                    print(" Convergence after ", str(iter_), " iterations", end='')
                     break
                 mean_prev = np.copy(mean)
 

@@ -319,7 +319,7 @@ class BRVFL(Model):
             b = pm.Normal('b', mu=0, tau=p, shape=(len(d[0]), n_class))
             y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
         
-        map_estimate =  pm.find_MAP(model=model)
+        map_estimate =  pm.find_MAP(model=model, progressbar=False)
         self.prec, self.var, self.beta = map_estimate['p'].item(0), map_estimate['v'].item(0), map_estimate['b']
 
         # Iterate to meet convergence criteria
@@ -341,7 +341,7 @@ class BRVFL(Model):
 
             # Check for convergence
             if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                print("Convergence after ", str(iter_), " iterations")
+                print(" Convergence after ", str(iter_), " iterations", end='')
                 break
             mean_prev = np.copy(mean)
 
@@ -426,7 +426,7 @@ class BDeepRVFL(Model):
             b = pm.Normal('b', mu=0, tau=p, shape=(len(d[0]), n_class))
             y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
         
-        map_estimate =  pm.find_MAP(model=model)
+        map_estimate =  pm.find_MAP(model=model, progressbar=False)
         self.prec, self.var, self.beta = map_estimate['p'].item(0), map_estimate['v'].item(0), map_estimate['b']
 
         # Iterate to meet convergence criteria
@@ -448,7 +448,7 @@ class BDeepRVFL(Model):
 
             # Check for convergence
             if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                print("Convergence after ", str(iter_), " iterations")
+                print(" Convergence after ", str(iter_), " iterations", end='')
                 break
             mean_prev = np.copy(mean)
 
@@ -555,7 +555,7 @@ class BEnsembleDeepRVFL(Model):
                     b = pm.Normal('b', mu=0, tau=p, shape=(len(d[0]), n_class))
                     y_obs = pm.Normal('y_obs', mu=pm.math.dot(d, b), tau=v, observed=y)
                 
-                map_estimate =  pm.find_MAP(model=model)
+                map_estimate =  pm.find_MAP(model=model, progressbar=False)
                 # Set map estimate of prec, var, beta as initial value for each model in the ensemble
                 self.prec = [map_estimate['p'].item(0) for _ in range(self.n_layer)]
                 self.var = [map_estimate['v'].item(0) for _ in range(self.n_layer)]
@@ -580,7 +580,7 @@ class BEnsembleDeepRVFL(Model):
 
                 # Check for convergence
                 if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                    print("Convergence after ", str(iter_), " iterations")
+                    print(" Convergence after ", str(iter_), " iterations", end='')
                     break
                 mean_prev = np.copy(mean)
 

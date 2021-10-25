@@ -1,6 +1,7 @@
 from sklearn.model_selection import KFold
 import numpy as np
 from models import *
+from models_MR import *
 from time import time
 from IPython.display import clear_output
 
@@ -9,6 +10,7 @@ np.random.seed(42)
 
 # hyperparameters
 lams = [2**i for i in range(-6, 13, 2)] # regularization parameter, lambda
+lap_lams = [[2**i, 2**j] for i in range(-6, 13, 2) for j in range(-6, 13, 2)] # permutation of all possible lams
 
 def cross_val_acc(data, label, n_class, model_class, lam=None, n_layer=1, activation='sigmoid'):
     n_node = 100 # num of nodes in hidden layer
@@ -24,9 +26,9 @@ def cross_val_acc(data, label, n_class, model_class, lam=None, n_layer=1, activa
         train_index, val_index = kf_values
         X_val_train, X_val_test = data[train_index], data[val_index]
         y_val_train, y_val_test = label[train_index], label[val_index]
-        if model_class in [RVFL, DeepRVFL, EnsembleDeepRVFL]:
+        if model_class in [RVFL, DeepRVFL, EnsembleDeepRVFL, LapRVFL, LapDeepRVFL, LapEnsembleDeepRVFL]:
             model = model_class(n_node, lam, w_range, b_range, n_layer, activation=activation)
-        elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL]:
+        elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL, LapBRVFL, LapBDeepRVFL, LapBEnsembleDeepRVFL]:
             model = model_class(n_node, w_range, b_range, n_layer, tol=10**(-7), activation=activation)
         t = time()
         model.train(X_val_train, y_val_train, n_class)
@@ -138,3 +140,89 @@ def run_BedRVFL(data, label, n_class):
     print('Precision: ', model.prec)
     print('Variance: ', model.var)
 
+def run_LapRVFL(data, label, n_class):
+    acc = []
+    t = []
+    for i, lam in enumerate(lap_lams):
+        print('running Laplacian RVFL...')
+        print('Hyperparameters {}: lam_r={}, lam_m={}'.format(i+1, lam[0], lam[1]))
+        _, model_accuracy, duration = cross_val_acc(data, label, n_class, LapRVFL, lam)
+        acc.append(model_accuracy)
+        t.append(duration)
+        clear_output(wait=True)
+
+    max_index = np.argmax(acc, axis=0)[0]
+    opt_lam = lap_lams[max_index]
+    print('Accuracy: ', acc[max_index][0], u"\u00B1", acc[max_index][1])
+    print('Lambda: ', opt_lam)
+    print('Train time: ', t[max_index][0])
+    print('Test time: ', t[max_index][1])
+
+def run_LapdRVFL(data, label, n_class):
+    acc = []
+    t = []
+    for i, lam in enumerate(lap_lams):
+        print('running Laplacian Deep RVFL...')
+        print('Hyperparameters {}: lam_r={}, lam_m={}'.format(i+1, lam[0], lam[1]))
+        _, model_accuracy, duration = cross_val_acc(data, label, n_class, LapDeepRVFL, lam)
+        acc.append(model_accuracy)
+        t.append(duration)
+        clear_output(wait=True)
+
+    max_index = np.argmax(acc, axis=0)[0]
+    opt_lam = lap_lams[max_index]
+    print('Accuracy: ', acc[max_index][0], u"\u00B1", acc[max_index][1])
+    print('Lambda: ', opt_lam)
+    print('Train time: ', t[max_index][0])
+    print('Test time: ', t[max_index][1])
+
+def run_LapedRVFL(data, label, n_class):
+    acc = []
+    t = []
+    for i, lam in enumerate(lap_lams):
+        print('running Laplacian Ensemble Deep RVFL...')
+        print('Hyperparameters {}: lam_r={}, lam_m={}'.format(i+1, lam[0], lam[1]))
+        _, model_accuracy, duration = cross_val_acc(data, label, n_class, LapEnsembleDeepRVFL, lam)
+        acc.append(model_accuracy)
+        t.append(duration)
+        clear_output(wait=True)
+
+    max_index = np.argmax(acc, axis=0)[0]
+    opt_lam = lap_lams[max_index]
+    print('Accuracy: ', acc[max_index][0], u"\u00B1", acc[max_index][1])
+    print('Lambda: ', opt_lam)
+    print('Train time: ', t[max_index][0])
+    print('Test time: ', t[max_index][1])
+
+# def run_BLapRVFL(data, label, n_class):
+#     print('running Bayesian Laplacian RVFL...')
+#     model, acc, t = cross_val_acc(data, label, n_class, BLapRVFL)
+
+#     print('Accuracy: ', acc[0], u"\u00B1", acc[1])
+#     print('Train time: ', t[0])
+#     print('Test time: ', t[1])
+#     print('Hyperparameters: ')
+#     print('Precision: ', model.prec)
+#     print('Variance: ', model.var)
+
+# def run_BLapdRVFL(data, label, n_class):
+#     print('running Bayesian Laplacian Deep RVFL...')
+#     model, acc, t = cross_val_acc(data, label, n_class, BLapDeepRVFL, n_layer=5)
+
+#     print('Accuracy: ', acc[0], u"\u00B1", acc[1])
+#     print('Train time: ', t[0])
+#     print('Test time: ', t[1])
+#     print('Hyperparameters: ')
+#     print('Precision: ', model.prec)
+#     print('Variance: ', model.var)
+
+# def run_BLapedRVFL(data, label, n_class):
+#     print('running Bayesian Laplacian Ensemble Deep RVFL...')
+#     model, acc, t = cross_val_acc(data, label, n_class, BLapEnsembleDeepRVFL, n_layer=5)
+
+#     print('Accuracy: ', acc[0], u"\u00B1", acc[1])
+#     print('Train time: ', t[0])
+#     print('Test time: ', t[1])
+#     print('Hyperparameters: ')
+#     print('Precision: ', model.prec)
+#     print('Variance: ', model.var)
