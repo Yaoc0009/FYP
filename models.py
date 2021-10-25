@@ -3,6 +3,7 @@ import pymc3 as pm
 
 # # set random seed
 # np.random.seed(42)
+np.seterr(over='ignore')
 
 class Model:
     def one_hot_encoding(self, label, n_class):

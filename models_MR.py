@@ -4,6 +4,7 @@ from Laplacian import Laplacian
 
 # # set random seed
 # np.random.seed(42)
+np.seterr(over='ignore')
 
 class Model:
     def one_hot_encoding(self, label, n_class):
@@ -28,6 +29,25 @@ class Model:
         
     def softmax(self, x):
         return np.exp(x) / np.repeat((np.sum(np.exp(x), axis=1))[:, np.newaxis], len(x[0]), axis=1)
+
+    def beta_function(self, d, L, C0, lam, y):
+        # number of samples per class label
+        n_sample, n_feature = np.shape(d)
+        C = np.identity(n_sample) * C0
+        # More labeled examples than hidden neurons
+        if n_sample > (self.n_node + n_feature):
+            I = np.identity(n_feature)
+            inv_arg = I + np.linalg.multi_dot([d.T, C, d]) + lam * np.linalg.multi_dot([d.T, L, d])
+            beta = np.linalg.multi_dot([np.linalg.inv(inv_arg), d.T, C, y])
+
+        # Less labeled examples than hidden neurons (apparently the more common case)
+        else:
+            I = np.identity(n_sample)
+            inv_arg = I + np.linalg.multi_dot([C, d, d.T]) + lam * np.linalg.multi_dot([L, d, d.T])
+            beta = np.linalg.multi_dot([d.T, np.linalg.inv(inv_arg), C, y])
+
+        beta = np.asarray(beta)
+        return beta
 
 class Activation:
     def sigmoid(self, x):
@@ -76,7 +96,7 @@ class RVFL(Model):
         d = np.concatenate([h, data], axis=1)
         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
-        L = Laplacian(data, k=3)
+        L = Laplacian(data, k=2)
         self.beta = self.beta_function(d, L, self.C0, self.lam, y)
             
     def predict(self, data, raw_output=False):
@@ -97,32 +117,14 @@ class RVFL(Model):
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
         return acc
-    
-    def beta_function(self, H, L, C0, lam, y):
-        # number of samples per class label
-        n_sample, n_feature = np.shape(H)
-        C = np.identity(n_sample) * C0
-        # More labeled examples than hidden neurons
-        if n_sample > (self.n_node + n_feature):
-            I = np.identity(n_feature)
-            inv_arg = I + np.linalg.multi_dot([H.T, C, H]) + lam * np.linalg.multi_dot([H.T, L, H])
-            beta = np.linalg.multi_dot([np.linalg.inv(inv_arg), H.T, C, y])
-
-        # Less labeled examples than hidden neurons (apparently the more common case)
-        else:
-            I = np.identity(n_sample)
-            inv_arg = I + np.linalg.multi_dot([C, H, H.T]) + lam * np.linalg.multi_dot([L, H, H.T])
-            beta = np.linalg.multi_dot([H.T, np.linalg.inv(inv_arg), C, y])
-
-        beta = np.asarray(beta)
-        return beta
 
 class DeepRVFL(Model):
     """ Deep RVFL Classifier """
     
     def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
         self.n_node = n_node
-        self.lam = lam
+        self.C0 = 1 / lam[0]
+        self.lam = lam[1]
         self.w_range = w_range
         self.b_range = b_range
         self.weight = []
@@ -152,11 +154,8 @@ class DeepRVFL(Model):
 
         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
-        # Minimize training complexity
-        if n_sample > (self.n_node + n_feature):
-            self.beta = np.linalg.inv((self.lam * np.identity(d.shape[1]) + np.dot(d.T, d))).dot(d.T).dot(y)
-        else:
-            self.beta = d.T.dot(np.linalg.inv(self.lam * np.identity(n_sample) + np.dot(d, d.T))).dot(y)
+        L = Laplacian(data, k=2)
+        self.beta = self.beta_function(d, L, self.C0, self.lam, y)
             
     def predict(self, data, raw_output=False):
         n_sample = len(data)
@@ -201,7 +200,8 @@ class EnsembleDeepRVFL(Model):
     
     def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
         self.n_node = n_node
-        self.lam = lam
+        self.C0 = 1 / lam[0]
+        self.lam = lam[1]
         self.w_range = w_range
         self.b_range = b_range
         self.weight = []
@@ -223,6 +223,7 @@ class EnsembleDeepRVFL(Model):
         data = self.standardize(data, 0) # Normalize
         h = data.copy()
         y = self.one_hot_encoding(label, n_class)
+        L = Laplacian(data, k=2)
         for i in range(self.n_layer):
             h = self.standardize(h, i)
             self.weight.append((self.w_range[1] - self.w_range[0]) * np.random.random([len(h[0]), self.n_node]) + self.w_range[0])
@@ -231,12 +232,7 @@ class EnsembleDeepRVFL(Model):
             d = np.concatenate([h, data], axis=1)
             h = d
             d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
-
-            # Minimize training complexity
-            if n_sample > (self.n_node + n_feature):
-                self.beta.append(np.linalg.inv((self.lam * np.identity(d.shape[1]) + np.dot(d.T, d))).dot(d.T).dot(y))
-            else:
-                self.beta.append(d.T.dot(np.linalg.inv(self.lam * np.identity(n_sample) + np.dot(d, d.T))).dot(y))
+            self.beta.append(self.beta_function(d, L, self.C0, self.lam, y))
             
     def predict(self, data, raw_output=False):
         n_sample = len(data)
