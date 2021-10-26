@@ -194,7 +194,7 @@ def run_LapedRVFL(data, label, n_class):
     print('Train time: ', t[max_index][0])
     print('Test time: ', t[max_index][1])
 
-# def run_BLapRVFL(data, label, n_class):
+# def run_LapBRVFL(data, label, n_class):
 #     print('running Bayesian Laplacian RVFL...')
 #     model, acc, t = cross_val_acc(data, label, n_class, BLapRVFL)
 
@@ -205,7 +205,7 @@ def run_LapedRVFL(data, label, n_class):
 #     print('Precision: ', model.prec)
 #     print('Variance: ', model.var)
 
-# def run_BLapdRVFL(data, label, n_class):
+# def run_LapBdRVFL(data, label, n_class):
 #     print('running Bayesian Laplacian Deep RVFL...')
 #     model, acc, t = cross_val_acc(data, label, n_class, BLapDeepRVFL, n_layer=5)
 
@@ -216,7 +216,7 @@ def run_LapedRVFL(data, label, n_class):
 #     print('Precision: ', model.prec)
 #     print('Variance: ', model.var)
 
-# def run_BLapedRVFL(data, label, n_class):
+# def run_LapBedRVFL(data, label, n_class):
 #     print('running Bayesian Laplacian Ensemble Deep RVFL...')
 #     model, acc, t = cross_val_acc(data, label, n_class, BLapEnsembleDeepRVFL, n_layer=5)
 

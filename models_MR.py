@@ -279,7 +279,7 @@ class LapEnsembleDeepRVFL(Model):
                 self.data_mean[index] = np.mean(x, axis=0)
             return (x - self.data_mean[index]) / self.data_std[index]
 
-class BLapRVFL(Model):
+class LapBRVFL(Model):
     """ BRVFL Classifier """
 
     def __init__(self, n_node, w_range, b_range, n_layer=1, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
@@ -383,7 +383,7 @@ class BLapRVFL(Model):
         acc = np.sum(np.equal(result, label))/len(label)
         return acc
 
-class BLapDeepRVFL(Model):
+class LapBDeepRVFL(Model):
     """ Bayesian Deep RVFL Classifier """
 
     def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
@@ -509,7 +509,7 @@ class BLapDeepRVFL(Model):
                 self.data_mean[index] = np.mean(x, axis=0)
             return (x - self.data_mean[index]) / self.data_std[index]
 
-class BLapEnsembleDeepRVFL(Model):
+class LapBEnsembleDeepRVFL(Model):
     """ Bayesian Deep RVFL Classifier """
 
     def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
