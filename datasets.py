@@ -35,3 +35,20 @@ def uspstb():
     data = dataset['X']
     n_class = len(np.unique(label))
     return data, label, n_class
+
+def usps():
+    dataset = loadmat('usps.mat')
+    dataset = np.concatenate((dataset['uspstrain'], dataset['uspstest']))
+    data = dataset[:, 1:]
+    label = dataset[:, 0].astype(np.uint8)
+    n_class = len(np.unique(label))
+    return data, label, n_class
+
+def uspsb():
+    dataset = loadmat('usps.mat')
+    dataset = np.concatenate((dataset['uspstrain'], dataset['uspstest']))
+    data = dataset[:, 1:]
+    label = dataset[:, 0].astype(np.uint8)
+    label = np.array(label[i] % 2 for i in range(len(label)))
+    n_class = len(np.unique(label))
+    return data, label, n_class

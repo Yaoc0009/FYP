@@ -52,6 +52,9 @@ def run_all(data, label, n_class):
     run_BRVFL(data, label, n_class)
     run_BdRVFL(data, label, n_class)
     run_BedRVFL(data, label, n_class)
+    run_LapRVFL(data, label, n_class)
+    run_LapdRVFL(data, label, n_class)
+    run_LapedRVFL(data, label, n_class)
 
 def run_RVFL(data, label, n_class):
     acc = []
