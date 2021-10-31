@@ -9,8 +9,8 @@ from Laplacian import laplacian
 np.random.seed(42)
 
 # hyperparameters
-lams = [2**i for i in range(-6, 13, 2)] # regularization parameter, lambda
-lap_lams = [[2**i, 2**j] for i in range(-6, 13, 2) for j in range(-6, 13, 2)] # permutation of all possible lams
+lams = [10**i for i in range(-6, 7)] # regularization parameter, lambda
+lap_lams = [[10**i, 10**j] for i in range(-6, 7) for j in range(-6, 7)] # permutation of all possible lams
 
 def partition_data(X_train, y_train, partition):
     L, U, V, T = partition[0], partition[1], partition[2], partition[3]

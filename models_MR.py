@@ -85,7 +85,7 @@ class LapRVFL(Model):
         
     def train(self, data, label, n_class):
         assert len(data.shape) > 1
-        # assert len(data) == len(label)
+        assert len(data) == len(label)
         assert len(label.shape) == 1
         
         data = self.standardize(data) # Normalize
@@ -100,7 +100,6 @@ class LapRVFL(Model):
         y = self.one_hot_encoding(label, n_class)
         label_proportions = np.sum(y, axis=0)
         assert sum(label_proportions) == len(label)
-        # L = Laplacian(data, k=self.NN)
         self.beta = self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions)
             
     def predict(self, data, raw_output=False):
@@ -120,7 +119,7 @@ class LapRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc, result
+        return acc
 
 class LapDeepRVFL(Model):
     """ Deep RVFL Classifier """
@@ -162,7 +161,6 @@ class LapDeepRVFL(Model):
         y = self.one_hot_encoding(label, n_class)
         label_proportions = np.sum(y, axis=0)
         assert sum(label_proportions) == len(label)
-        # L = Laplacian(data, k=self.NN)
         self.beta = self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions)
             
     def predict(self, data, raw_output=False):
@@ -187,7 +185,7 @@ class LapDeepRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc, result
+        return acc
 
     def standardize(self, x, index):
         if self.same_feature is True:
@@ -235,7 +233,6 @@ class LapEnsembleDeepRVFL(Model):
         y = self.one_hot_encoding(label, n_class)
         label_proportions = np.sum(y, axis=0)
         assert sum(label_proportions) == len(label)
-        # L = Laplacian(data, k=self.NN)
         for i in range(self.n_layer):
             h = self.standardize(h, i)
             self.weight.append((self.w_range[1] - self.w_range[0]) * np.random.random([len(h[0]), self.n_node]) + self.w_range[0])
@@ -275,7 +272,7 @@ class LapEnsembleDeepRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc, result
+        return acc
 
     def standardize(self, x, index):
         if self.same_feature is True:

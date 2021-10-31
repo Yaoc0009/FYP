@@ -6,33 +6,6 @@ from sklearn.neighbors import NearestNeighbors, kneighbors_graph
 import matplotlib.pyplot as plt
 
 # calculates normalized Laplacian
-def Laplacian(data, k, sigma=1):
-    def gaussian(x, sigma):
-        denom = 2.0*(sigma**2.0)
-        E = np.exp(-(x**2.0)/denom)
-        return E
-        
-    func = np.vectorize(gaussian, excluded=['sigma'])
-    NN = NearestNeighbors(n_neighbors=k,
-                          algorithm='auto',
-                          metric='euclidean',
-                          n_jobs= 1)
-    NN.fit(data)
-
-    W = NN.kneighbors_graph(mode='distance')
-    actual_sigma = W[W != 0].std()
-    W[W != 0] = func(W[W != 0], actual_sigma)
-
-    components = W.sum(axis=1)
-    DPM_components = np.power(components, -0.5)
-
-    D = np.diagflat(components)
-    DPM = np.diagflat(DPM_components)
-    L =  D - W
-    DLD = np.linalg.multi_dot([DPM, L, DPM])
-
-    return DLD
-
 def adjacency(data, n_neighbors, sigma):
     W = kneighbors_graph(data, n_neighbors, mode='distance', include_self=False)
     W = W.maximum(W.T)
@@ -49,9 +22,3 @@ def laplacian(X_lab, X_unlab, n_neighbours, sigma):
     L = eye(len(W)) - W # L = I - D^-1/2*W*D^-1/2
     L = L.A
     return L
-
-if __name__ == "__main__":
-    dataset = loadmat('coil20.mat')
-    data = dataset['X']
-    k = 2
-    L = Laplacian(data, k)
