@@ -1,9 +1,8 @@
 import numpy as np
 import pymc3 as pm
-from sklearn.metrics import log_loss
 
-# # set random seed
-# np.random.seed(42)
+# set random seed
+np.random.seed(42)
 np.seterr(over='ignore')
 
 class Model:
@@ -30,6 +29,25 @@ class Model:
     def softmax(self, x):
         return np.exp(x) / np.repeat((np.sum(np.exp(x), axis=1))[:, np.newaxis], len(x[0]), axis=1)
 
+    def beta_function(self, d, L, C0, lam, y, label, label_proportions):
+        # number of samples per class label
+        n_sample, n_feature = np.shape(d)
+        C = np.zeros_like(L)
+        for i, class_num in enumerate(label):
+            C[i, i] = float(C0)/label_proportions[class_num]
+        # More labeled examples than hidden neurons
+        if n_sample > (self.n_node + n_feature):
+            I = np.identity(n_feature)
+            inv_arg = I + np.linalg.multi_dot([d.T, C, d]) + lam * np.linalg.multi_dot([d.T, L, d])
+            beta = np.linalg.multi_dot([np.linalg.inv(inv_arg), d.T, C, y])
+        # Less labeled examples than hidden neurons (apparently the more common case)
+        else:
+            I = np.identity(n_sample)
+            inv_arg = I + np.linalg.multi_dot([C, d, d.T]) + lam * np.linalg.multi_dot([L, d, d.T])
+            beta = np.linalg.multi_dot([d.T, np.linalg.inv(inv_arg), C, y])
+        beta = np.asarray(beta)
+        return beta
+
 class Activation:
     def sigmoid(self, x):
         return 1 / (1 + np.e ** (-x))
@@ -42,6 +60,62 @@ class Activation:
     
     def relu(self, x):
         return np.maximum(0, x)
+
+class ELM(Model):
+    """ ELM Classifier """
+    
+    def __init__(self, n_node, lam, w_range, b_range, n_layer=1, activation='sigmoid', same_feature=False):
+        self.n_node = n_node
+        self.n_layer = n_layer
+        self.lam = lam
+        self.w_range = w_range
+        self.b_range = b_range
+        self.weight = None
+        self.bias = None
+        self.beta = None
+        a = Activation()
+        self.activation_function = getattr(a, activation)
+        self.data_std = None
+        self.data_mean = None
+        self.same_feature = same_feature
+        
+    def train(self, data, label, n_class):
+        assert len(data.shape) > 1
+        assert len(data) == len(label)
+        assert len(label.shape) == 1
+
+        data = self.standardize(data) # Normalize
+        n_sample = len(data)
+        n_feature = len(data[0])
+        self.weight = (self.w_range[1] - self.w_range[0]) * np.random.random([n_feature, self.n_node]) + self.w_range[0]
+        self.bias = (self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0]
+        
+        d = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
+        y = self.one_hot_encoding(label, n_class)
+        # Minimize training complexity
+        if n_sample > (self.n_node + n_feature):
+            self.beta = (np.linalg.inv(self.lam * np.identity(d.shape[1]) + np.dot(d.T, d))).dot(d.T).dot(y)
+        else:
+            self.beta = d.T.dot(np.linalg.inv(self.lam * np.identity(n_sample) + np.dot(d, d.T))).dot(y)
+            
+    def predict(self, data, raw_output=False):
+        data = self.standardize(data) # Normalize
+        d = self.activation_function(np.dot(data, self.weight) + self.bias)
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
+        result = self.softmax(np.dot(d, self.beta))
+        if not raw_output:
+            result = np.argmax(result, axis=1)
+        return result
+    
+    def eval(self, data, label):
+        assert len(data.shape) > 1
+        assert len(data) == len(label)
+        assert len(label.shape) == 1
+        
+        result = self.predict(data, False)
+        acc = np.sum(np.equal(result, label))/len(label)
+        return acc, result
 
 class RVFL(Model):
     """ RVFL Classifier """
@@ -65,7 +139,7 @@ class RVFL(Model):
         assert len(data.shape) > 1
         assert len(data) == len(label)
         assert len(label.shape) == 1
-        self.n_class = n_class
+
         data = self.standardize(data) # Normalize
         n_sample = len(data)
         n_feature = len(data[0])
@@ -75,7 +149,7 @@ class RVFL(Model):
         h = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
         d = np.concatenate([h, data], axis=1)
         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
-        y = self.one_hot_encoding(label, self.n_class)
+        y = self.one_hot_encoding(label, n_class)
         # Minimize training complexity
         if n_sample > (self.n_node + n_feature):
             self.beta = (np.linalg.inv(self.lam * np.identity(d.shape[1]) + np.dot(d.T, d))).dot(d.T).dot(y)
@@ -97,11 +171,7 @@ class RVFL(Model):
         assert len(data) == len(label)
         assert len(label.shape) == 1
         
-        raw_pred = self.predict(data, True)
-        result = np.argmax(raw_pred, axis=1)
-        # y = self.one_hot_encoding(label, self.n_class)
-        # rmse = np.sum(np.abs(y - raw_pred))
-        # err = log_loss(y, raw_pred)
+        result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
         return acc, result
 
@@ -168,7 +238,7 @@ class DeepRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc
+        return acc, result
 
     def standardize(self, x, index):
         if self.same_feature is True:
@@ -255,7 +325,7 @@ class EnsembleDeepRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc
+        return acc, result
 
     def standardize(self, x, index):
         if self.same_feature is True:
@@ -373,7 +443,7 @@ class BRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc
+        return acc, result
 
 class BDeepRVFL(Model):
     """ Bayesian Deep RVFL Classifier """
@@ -485,7 +555,7 @@ class BDeepRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc
+        return acc, result
 
     def standardize(self, x, index):
         if self.same_feature is True:
@@ -624,8 +694,293 @@ class BEnsembleDeepRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc
+        return acc, result
     
+    def standardize(self, x, index):
+        if self.same_feature is True:
+            if self.data_std[index] is None:
+                self.data_std[index] = np.maximum(np.std(x), 1/np.sqrt(len(x)))
+            if self.data_mean[index] is None:
+                self.data_mean[index] = np.mean(x)
+            return (x - self.data_mean[index]) / self.data_std[index]
+        else:
+            if self.data_std[index] is None:
+                self.data_std[index] = np.maximum(np.std(x, axis=0), 1/np.sqrt(len(x)))
+            if self.data_mean[index] is None:
+                self.data_mean[index] = np.mean(x, axis=0)
+            return (x - self.data_mean[index]) / self.data_std[index]
+
+class LapELM(Model):
+    """ Laplacian ELM Classifier """
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer=1, activation='sigmoid', same_feature=False):
+        self.n_node = n_node
+        self.n_layer = n_layer
+        self.NN = NN
+        self.L = L
+        self.C0 = 1 / lam[0]
+        self.lam = lam[1]
+        self.w_range = w_range
+        self.b_range = b_range
+        self.weight = None
+        self.bias = None
+        self.beta = None
+        a = Activation()
+        self.activation_function = getattr(a, activation)
+        self.data_std = None
+        self.data_mean = None
+        self.same_feature = same_feature
+        
+    def train(self, data, label, n_class):
+        assert len(data.shape) > 1
+        # assert len(data) == len(label)
+        assert len(label.shape) == 1
+        
+        data = self.standardize(data) # Normalize
+        n_sample = len(data)
+        n_feature = len(data[0])
+        self.weight = (self.w_range[1] - self.w_range[0]) * np.random.random([n_feature, self.n_node]) + self.w_range[0]
+        self.bias = (self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0]
+        
+        d = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
+        y = self.one_hot_encoding(label, n_class)
+        label_proportions = np.sum(y, axis=0)
+        assert sum(label_proportions) == len(label)
+        # L = Laplacian(data, k=self.NN)
+        self.beta = self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions)
+            
+    def predict(self, data, raw_output=False):
+        data = self.standardize(data) # Normalize
+        d = self.activation_function(np.dot(data, self.weight) + self.bias)
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
+        result = self.softmax(np.dot(d, self.beta))
+        if not raw_output:
+            result = np.argmax(result, axis=1)
+        return result
+    
+    def eval(self, data, label):
+        assert len(data.shape) > 1
+        assert len(data) == len(label)
+        assert len(label.shape) == 1
+        
+        result = self.predict(data, False)
+        acc = np.sum(np.equal(result, label))/len(label)
+        return acc, result
+
+class LapRVFL(Model):
+    """ Laplacian RVFL Classifier """
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer=1, activation='sigmoid', same_feature=False):
+        self.n_node = n_node
+        self.n_layer = n_layer
+        self.NN = NN
+        self.L = L
+        self.C0 = 1 / lam[0]
+        self.lam = lam[1]
+        self.w_range = w_range
+        self.b_range = b_range
+        self.weight = None
+        self.bias = None
+        self.beta = None
+        a = Activation()
+        self.activation_function = getattr(a, activation)
+        self.data_std = None
+        self.data_mean = None
+        self.same_feature = same_feature
+        
+    def train(self, data, label, n_class):
+        assert len(data.shape) > 1
+        # assert len(data) == len(label)
+        assert len(label.shape) == 1
+        
+        data = self.standardize(data) # Normalize
+        n_sample = len(data)
+        n_feature = len(data[0])
+        self.weight = (self.w_range[1] - self.w_range[0]) * np.random.random([n_feature, self.n_node]) + self.w_range[0]
+        self.bias = (self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0]
+        
+        h = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
+        d = np.concatenate([h, data], axis=1)
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
+        y = self.one_hot_encoding(label, n_class)
+        label_proportions = np.sum(y, axis=0)
+        assert sum(label_proportions) == len(label)
+        # L = Laplacian(data, k=self.NN)
+        self.beta = self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions)
+            
+    def predict(self, data, raw_output=False):
+        data = self.standardize(data) # Normalize
+        h = self.activation_function(np.dot(data, self.weight) + self.bias)
+        d = np.concatenate([h, data], axis=1)
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
+        result = self.softmax(np.dot(d, self.beta))
+        if not raw_output:
+            result = np.argmax(result, axis=1)
+        return result
+    
+    def eval(self, data, label):
+        assert len(data.shape) > 1
+        assert len(data) == len(label)
+        assert len(label.shape) == 1
+        
+        result = self.predict(data, False)
+        acc = np.sum(np.equal(result, label))/len(label)
+        return acc, result
+
+class LapDeepRVFL(Model):
+    """ Laplacian Deep RVFL Classifier """
+    
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer, activation='sigmoid', same_feature=False):
+        self.n_node = n_node
+        self.NN = NN
+        self.L = L
+        self.C0 = 1 / lam[0]
+        self.lam = lam[1]
+        self.w_range = w_range
+        self.b_range = b_range
+        self.weight = []
+        self.bias = []
+        self.beta = None
+        a = Activation()
+        self.activation_function = getattr(a, activation)
+        self.n_layer = n_layer
+        self.data_std = [None] * self.n_layer
+        self.data_mean = [None] * self.n_layer
+        self.same_feature = same_feature
+        
+    def train(self, data, label, n_class):
+        assert len(data.shape) > 1
+        assert len(data) == len(label)
+        assert len(label.shape) == 1
+        
+        n_sample, n_feature = np.shape(data)
+        d = self.standardize(data, 0) # Normalize
+        h = data.copy()
+        for i in range(self.n_layer):
+            h = self.standardize(h, i)
+            self.weight.append((self.w_range[1] - self.w_range[0]) * np.random.random([len(h[0]), self.n_node]) + self.w_range[0])
+            self.bias.append((self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0])
+            h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
+            d = np.concatenate([h, d], axis=1)
+
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
+        y = self.one_hot_encoding(label, n_class)
+        label_proportions = np.sum(y, axis=0)
+        assert sum(label_proportions) == len(label)
+        # L = Laplacian(data, k=self.NN)
+        self.beta = self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions)
+            
+    def predict(self, data, raw_output=False):
+        n_sample = len(data)
+        d = self.standardize(data, 0) # Normalize
+        h = data.copy()
+        for i in range(self.n_layer):
+            h = self.standardize(h, i)
+            h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
+            d = np.concatenate([h, d], axis=1)
+
+        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
+        result = self.softmax(np.dot(d, self.beta))
+        if not raw_output:
+            result = np.argmax(result, axis=1)
+        return result
+    
+    def eval(self, data, label):
+        assert len(data.shape) > 1
+        assert len(data) == len(label)
+        assert len(label.shape) == 1
+        
+        result = self.predict(data, False)
+        acc = np.sum(np.equal(result, label))/len(label)
+        return acc, result
+
+    def standardize(self, x, index):
+        if self.same_feature is True:
+            if self.data_std[index] is None:
+                self.data_std[index] = np.maximum(np.std(x), 1/np.sqrt(len(x)))
+            if self.data_mean[index] is None:
+                self.data_mean[index] = np.mean(x)
+            return (x - self.data_mean[index]) / self.data_std[index]
+        else:
+            if self.data_std[index] is None:
+                self.data_std[index] = np.maximum(np.std(x, axis=0), 1/np.sqrt(len(x)))
+            if self.data_mean[index] is None:
+                self.data_mean[index] = np.mean(x, axis=0)
+            return (x - self.data_mean[index]) / self.data_std[index]
+        
+class LapEnsembleDeepRVFL(Model):
+    """ Laplacian Ensemble Deep RVFL Classifier """
+    
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer, activation='sigmoid', same_feature=False):
+        self.n_node = n_node
+        self.NN = NN
+        self.L = L
+        self.C0 = 1 / lam[0]
+        self.lam = lam[1]
+        self.w_range = w_range
+        self.b_range = b_range
+        self.weight = []
+        self.bias = []
+        self.beta = []
+        a = Activation()
+        self.activation_function = getattr(a, activation)
+        self.n_layer = n_layer
+        self.data_std = [None] * self.n_layer
+        self.data_mean = [None] * self.n_layer
+        self.same_feature = same_feature
+        
+    def train(self, data, label, n_class):
+        assert len(data.shape) > 1
+        assert len(data) == len(label)
+        assert len(label.shape) == 1
+        
+        n_sample, n_feature = np.shape(data)
+        data = self.standardize(data, 0) # Normalize
+        h = data.copy()
+        y = self.one_hot_encoding(label, n_class)
+        label_proportions = np.sum(y, axis=0)
+        assert sum(label_proportions) == len(label)
+        # L = Laplacian(data, k=self.NN)
+        for i in range(self.n_layer):
+            h = self.standardize(h, i)
+            self.weight.append((self.w_range[1] - self.w_range[0]) * np.random.random([len(h[0]), self.n_node]) + self.w_range[0])
+            self.bias.append((self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0])
+            h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
+            d = np.concatenate([h, data], axis=1)
+            h = d
+            d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
+            self.beta.append(self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions))
+            
+    def predict(self, data, raw_output=False):
+        n_sample = len(data)
+        data = self.standardize(data, 0) # Normalize
+        h = data.copy()
+        results = []
+        for i in range(self.n_layer):
+            h = self.standardize(h, i)
+            h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
+            d = np.concatenate([h, data], axis=1)
+            h = d
+            d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
+
+            if not raw_output:
+                results.append(np.argmax(np.dot(d, self.beta[i]), axis=1))
+            else:
+                results.append(self.softmax(np.dot(d, self.beta[i])))
+
+        if not raw_output:
+            results = list(map(np.bincount, list(np.array(results).transpose())))
+            results = np.array(list(map(np.argmax, results)))
+        return results
+    
+    def eval(self, data, label):
+        assert len(data.shape) > 1
+        assert len(data) == len(label)
+        assert len(label.shape) == 1
+        
+        result = self.predict(data, False)
+        acc = np.sum(np.equal(result, label))/len(label)
+        return acc, result
+
     def standardize(self, x, index):
         if self.same_feature is True:
             if self.data_std[index] is None:

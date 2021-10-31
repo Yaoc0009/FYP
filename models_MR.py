@@ -30,22 +30,22 @@ class Model:
     def softmax(self, x):
         return np.exp(x) / np.repeat((np.sum(np.exp(x), axis=1))[:, np.newaxis], len(x[0]), axis=1)
 
-    def beta_function(self, d, L, C0, lam, y):
+    def beta_function(self, d, L, C0, lam, y, label, label_proportions):
         # number of samples per class label
         n_sample, n_feature = np.shape(d)
-        C = np.identity(n_sample) * C0
+        C = np.zeros_like(L)
+        for i, class_num in enumerate(label):
+            C[i, i] = float(C0)/label_proportions[class_num]
         # More labeled examples than hidden neurons
         if n_sample > (self.n_node + n_feature):
             I = np.identity(n_feature)
             inv_arg = I + np.linalg.multi_dot([d.T, C, d]) + lam * np.linalg.multi_dot([d.T, L, d])
             beta = np.linalg.multi_dot([np.linalg.inv(inv_arg), d.T, C, y])
-
         # Less labeled examples than hidden neurons (apparently the more common case)
         else:
             I = np.identity(n_sample)
             inv_arg = I + np.linalg.multi_dot([C, d, d.T]) + lam * np.linalg.multi_dot([L, d, d.T])
             beta = np.linalg.multi_dot([d.T, np.linalg.inv(inv_arg), C, y])
-
         beta = np.asarray(beta)
         return beta
 
@@ -65,9 +65,11 @@ class Activation:
 class LapRVFL(Model):
     """ RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, n_layer=1, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer=1, activation='sigmoid', same_feature=False):
         self.n_node = n_node
         self.n_layer = n_layer
+        self.NN = NN
+        self.L = L
         self.C0 = 1 / lam[0]
         self.lam = lam[1]
         self.w_range = w_range
@@ -83,7 +85,7 @@ class LapRVFL(Model):
         
     def train(self, data, label, n_class):
         assert len(data.shape) > 1
-        assert len(data) == len(label)
+        # assert len(data) == len(label)
         assert len(label.shape) == 1
         
         data = self.standardize(data) # Normalize
@@ -96,8 +98,10 @@ class LapRVFL(Model):
         d = np.concatenate([h, data], axis=1)
         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
-        L = Laplacian(data, k=2)
-        self.beta = self.beta_function(d, L, self.C0, self.lam, y)
+        label_proportions = np.sum(y, axis=0)
+        assert sum(label_proportions) == len(label)
+        # L = Laplacian(data, k=self.NN)
+        self.beta = self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions)
             
     def predict(self, data, raw_output=False):
         data = self.standardize(data) # Normalize
@@ -116,13 +120,15 @@ class LapRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc
+        return acc, result
 
 class LapDeepRVFL(Model):
     """ Deep RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer, activation='sigmoid', same_feature=False):
         self.n_node = n_node
+        self.NN = NN
+        self.L = L
         self.C0 = 1 / lam[0]
         self.lam = lam[1]
         self.w_range = w_range
@@ -154,8 +160,10 @@ class LapDeepRVFL(Model):
 
         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
-        L = Laplacian(data, k=2)
-        self.beta = self.beta_function(d, L, self.C0, self.lam, y)
+        label_proportions = np.sum(y, axis=0)
+        assert sum(label_proportions) == len(label)
+        # L = Laplacian(data, k=self.NN)
+        self.beta = self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions)
             
     def predict(self, data, raw_output=False):
         n_sample = len(data)
@@ -179,7 +187,7 @@ class LapDeepRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc
+        return acc, result
 
     def standardize(self, x, index):
         if self.same_feature is True:
@@ -198,8 +206,10 @@ class LapDeepRVFL(Model):
 class LapEnsembleDeepRVFL(Model):
     """ Ensemble Deep RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer, activation='sigmoid', same_feature=False):
         self.n_node = n_node
+        self.NN = NN
+        self.L = L
         self.C0 = 1 / lam[0]
         self.lam = lam[1]
         self.w_range = w_range
@@ -223,7 +233,9 @@ class LapEnsembleDeepRVFL(Model):
         data = self.standardize(data, 0) # Normalize
         h = data.copy()
         y = self.one_hot_encoding(label, n_class)
-        L = Laplacian(data, k=2)
+        label_proportions = np.sum(y, axis=0)
+        assert sum(label_proportions) == len(label)
+        # L = Laplacian(data, k=self.NN)
         for i in range(self.n_layer):
             h = self.standardize(h, i)
             self.weight.append((self.w_range[1] - self.w_range[0]) * np.random.random([len(h[0]), self.n_node]) + self.w_range[0])
@@ -232,7 +244,7 @@ class LapEnsembleDeepRVFL(Model):
             d = np.concatenate([h, data], axis=1)
             h = d
             d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
-            self.beta.append(self.beta_function(d, L, self.C0, self.lam, y))
+            self.beta.append(self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions))
             
     def predict(self, data, raw_output=False):
         n_sample = len(data)
@@ -263,7 +275,7 @@ class LapEnsembleDeepRVFL(Model):
         
         result = self.predict(data, False)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc
+        return acc, result
 
     def standardize(self, x, index):
         if self.same_feature is True:
@@ -354,7 +366,7 @@ class LapBRVFL(Model):
 
             # Check for convergence
             if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                print(" Convergence after ", str(iter_), " iterations", end='')
+                # print(" Convergence after ", str(iter_), " iterations", end='')
                 break
             mean_prev = np.copy(mean)
 

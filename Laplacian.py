@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.io import loadmat
 from scipy import sparse
+from scipy.sparse import spdiags, eye
 from sklearn.neighbors import NearestNeighbors, kneighbors_graph
 import matplotlib.pyplot as plt
 
@@ -32,26 +33,22 @@ def Laplacian(data, k, sigma=1):
 
     return DLD
 
-def Laplacian2():
-    n_neighbors = 10
-    knn_dist_graph = kneighbors_graph(X=data,
-                                    n_neighbors=n_neighbors,
-                                    mode='distance',
-                                    metric='euclidean',
-                                    n_jobs=1)
+def adjacency(data, n_neighbors, sigma):
+    W = kneighbors_graph(data, n_neighbors, mode='distance', include_self=False)
+    W = W.maximum(W.T)
+    W = sparse.csr_matrix((np.exp(-W.data**2 / 2 / sigma**2), W.indices, W. indptr), shape=(len(data), len(data)))
+    return W.A
 
-    sigma = 1
-    similarity_graph = sparse.csr_matrix(knn_dist_graph.shape)
-    nonzeroindices = knn_dist_graph.nonzero()
-
-    similarity_graph[nonzeroindices] = np.exp(-np.asarray(knn_dist_graph[nonzeroindices])**2 / 2.0 * sigma**2)
-
-    similarity_graph = 0.5 * (similarity_graph + similarity_graph.T)
-
-    degree_matrix = similarity_graph.sum(axis=1)
-    diagonal_matrix = np.diag(np.asarray(degree_matrix).reshape(len(data),))
-
-    L =  diagonal_matrix - similarity_graph
+def laplacian(X_lab, X_unlab, n_neighbours, sigma):
+    data = np.vstack([X_lab, X_unlab])
+    W = adjacency(data, n_neighbours, sigma)
+    D = np.sum(W, axis=1)
+    D[D != 0] = np.sqrt(1 / D[D != 0])
+    D = spdiags(D, 0, len(W), len(W))
+    W = D @ W @ D
+    L = eye(len(W)) - W # L = I - D^-1/2*W*D^-1/2
+    L = L.A
+    return L
 
 if __name__ == "__main__":
     dataset = loadmat('coil20.mat')

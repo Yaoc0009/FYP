@@ -22,7 +22,7 @@ def cross_val_acc(data, label, n_class, model_class, lam=None, n_layer=1, activa
 
     kf = KFold(n_splits=10, shuffle=True)
     for i, kf_values in enumerate(kf.split(data, label)):
-        print('\rValidation: {}'.format(i + 1), end='')
+        # print('\rValidation: {}'.format(i + 1), end='')
         train_index, val_index = kf_values
         X_val_train, X_val_test = data[train_index], data[val_index]
         y_val_train, y_val_test = label[train_index], label[val_index]
@@ -57,11 +57,11 @@ def run_all(data, label, n_class):
     run_LapedRVFL(data, label, n_class)
 
 def run_RVFL(data, label, n_class):
+    print('running RVFL...')
     acc = []
     t = []
     for i, lam in enumerate(lams):
-        print('running RVFL...')
-        print('Hyperparameters {}: lam={}'.format(i+1, lam))
+        # print('Hyperparameters {}: lam={}'.format(i+1, lam))
         _, model_accuracy, duration = cross_val_acc(data, label, n_class, RVFL, lam)
         acc.append(model_accuracy)
         t.append(duration)
@@ -75,11 +75,11 @@ def run_RVFL(data, label, n_class):
     print('Test time: ', t[max_index][1])
 
 def run_dRVFL(data, label, n_class):
+    print('running Deep RVFL...')
     acc = []
     t = []
     for i, lam in enumerate(lams):
-        print('running Deep RVFL...')
-        print('Hyperparameters {}: lam={}'.format(i+1, lam))
+        # print('Hyperparameters {}: lam={}'.format(i+1, lam))
         _, model_accuracy, duration = cross_val_acc(data, label, n_class, DeepRVFL, lam, n_layer=5)
         acc.append(model_accuracy)
         t.append(duration)
@@ -93,11 +93,11 @@ def run_dRVFL(data, label, n_class):
     print('Test time: ', t[max_index][1])
 
 def run_edRVFL(data, label, n_class):
+    print('running Ensemble Deep RVFL...')
     acc = []
     t = []
     for i, lam in enumerate(lams):
-        print('running Ensemble Deep RVFL...')
-        print('Hyperparameters {}: lam={}'.format(i+1, lam))
+        # print('Hyperparameters {}: lam={}'.format(i+1, lam))
         _, model_accuracy, duration = cross_val_acc(data, label, n_class, EnsembleDeepRVFL, lam, n_layer=5)
         acc.append(model_accuracy)
         t.append(duration)
@@ -144,11 +144,11 @@ def run_BedRVFL(data, label, n_class):
     print('Variance: ', model.var)
 
 def run_LapRVFL(data, label, n_class):
+    print('running Laplacian RVFL...')
     acc = []
     t = []
     for i, lam in enumerate(lap_lams):
-        print('running Laplacian RVFL...')
-        print('Hyperparameters {}: lam_r={}, lam_m={}'.format(i+1, lam[0], lam[1]))
+        # print('Hyperparameters {}: lam_r={}, lam_m={}'.format(i+1, lam[0], lam[1]))
         _, model_accuracy, duration = cross_val_acc(data, label, n_class, LapRVFL, lam)
         acc.append(model_accuracy)
         t.append(duration)
@@ -162,11 +162,11 @@ def run_LapRVFL(data, label, n_class):
     print('Test time: ', t[max_index][1])
 
 def run_LapdRVFL(data, label, n_class):
+    print('running Laplacian Deep RVFL...')
     acc = []
     t = []
     for i, lam in enumerate(lap_lams):
-        print('running Laplacian Deep RVFL...')
-        print('Hyperparameters {}: lam_r={}, lam_m={}'.format(i+1, lam[0], lam[1]))
+        # print('Hyperparameters {}: lam_r={}, lam_m={}'.format(i+1, lam[0], lam[1]))
         _, model_accuracy, duration = cross_val_acc(data, label, n_class, LapDeepRVFL, lam)
         acc.append(model_accuracy)
         t.append(duration)
@@ -180,11 +180,11 @@ def run_LapdRVFL(data, label, n_class):
     print('Test time: ', t[max_index][1])
 
 def run_LapedRVFL(data, label, n_class):
+    print('running Laplacian Ensemble Deep RVFL...')
     acc = []
     t = []
     for i, lam in enumerate(lap_lams):
-        print('running Laplacian Ensemble Deep RVFL...')
-        print('Hyperparameters {}: lam_r={}, lam_m={}'.format(i+1, lam[0], lam[1]))
+        # print('Hyperparameters {}: lam_r={}, lam_m={}'.format(i+1, lam[0], lam[1]))
         _, model_accuracy, duration = cross_val_acc(data, label, n_class, LapEnsembleDeepRVFL, lam)
         acc.append(model_accuracy)
         t.append(duration)
