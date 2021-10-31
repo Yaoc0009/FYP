@@ -134,6 +134,8 @@ def run_fast(data, label, n_class, partition, NN):
     run_edRVFL(data, label, n_class, partition)
     run_LapELM(data, label, n_class, partition, NN)
     run_LapRVFL(data, label, n_class, partition, NN)
+    run_LapdRVFL(data, label, n_class, partition, NN)
+    run_LapedRVFL(data, label, n_class, partition, NN)
 
 def run_ELM(data, label, n_class, partition):
     print('running ELM...')
