@@ -92,7 +92,7 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
                 model = model_class(n_node, lam, w_range, b_range, NN, L, n_layer, activation=activation)
                 X_train, y_train = np.vstack([X_lab, X_unlab]), np.append(y_lab, [False]*len(y_unlab), 0)
             elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL]:
-                model = model_class(n_node, w_range, b_range, n_layer, tol=10**(-7), activation=activation)
+                model = model_class(n_node, lam, w_range, b_range, n_layer, tol=10**(-3), activation=activation)
             t = time()
             model.train(X_train, y_train, n_class)
             train_time.append(time() - t)
@@ -106,7 +106,7 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
             elif model_class in [LapRVFL, LapDeepRVFL, LapEnsembleDeepRVFL]:
                 model = model_class(n_node, lam, w_range, b_range, NN, L, n_layer, activation=activation)
             elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL]:
-                model = model_class(n_node, w_range, b_range, n_layer, tol=10**(-7), activation=activation)
+                model = model_class(n_node, w_range, b_range, n_layer, tol=10**(-5), activation=activation)
             t = time()
             model.train(new_X_train, new_y_train, n_class)
             train_time.append(time() - t)
@@ -127,16 +127,13 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
 
     return mean_unlab_acc, mean_val_acc, mean_test_acc, mean_train_time
 
-def run_all(data, label, n_class):
-    run_RVFL(data, label, n_class)
-    run_dRVFL(data, label, n_class)
-    run_edRVFL(data, label, n_class)
-    run_BRVFL(data, label, n_class)
-    run_BdRVFL(data, label, n_class)
-    run_BedRVFL(data, label, n_class)
-    run_LapRVFL(data, label, n_class)
-    run_LapdRVFL(data, label, n_class)
-    run_LapedRVFL(data, label, n_class)
+def run_fast(data, label, n_class, partition, NN):
+    run_ELM(data, label, n_class, partition)
+    run_RVFL(data, label, n_class, partition)
+    run_dRVFL(data, label, n_class, partition)
+    run_edRVFL(data, label, n_class, partition)
+    run_LapELM(data, label, n_class, partition, NN)
+    run_LapRVFL(data, label, n_class, partition, NN)
 
 def run_ELM(data, label, n_class, partition):
     print('running ELM...')

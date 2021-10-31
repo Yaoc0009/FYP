@@ -416,7 +416,7 @@ class BRVFL(Model):
 
             # Check for convergence
             if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                print(" Convergence after ", str(iter_), " iterations", end='')
+                print("Convergence after ", str(iter_), " iterations")
                 break
             mean_prev = np.copy(mean)
 
@@ -523,7 +523,7 @@ class BDeepRVFL(Model):
 
             # Check for convergence
             if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                print(" Convergence after ", str(iter_), " iterations", end='')
+                print("Convergence after ", str(iter_), " iterations")
                 break
             mean_prev = np.copy(mean)
 
@@ -655,7 +655,7 @@ class BEnsembleDeepRVFL(Model):
 
                 # Check for convergence
                 if iter_ != 0 and np.sum(np.abs(mean_prev - mean)) < self.tol:
-                    print(" Convergence after ", str(iter_), " iterations", end='')
+                    print("Convergence after ", str(iter_), " iterations")
                     break
                 mean_prev = np.copy(mean)
 
