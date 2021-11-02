@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split, ShuffleSplit
 from sklearn.utils import shuffle
 import numpy as np
-from models_SS import *
+from models_SS_edRVFL import *
 from time import time
 from Laplacian import laplacian
 
@@ -41,9 +41,9 @@ def partition_data(X_train, y_train, partition):
     lab_missing = L - len(_labeled)
     val_missing = V - len(_validation)
     # labeled
-    X_lab, X_remain, y_lab, y_remain = train_test_split(X_train[remaining], y_train[remaining], train_size=lab_missing)
+    X_lab, X_remain, y_lab, y_remain = train_test_split(X_train[remaining], y_train[remaining], train_size=lab_missing, random_state=42)
     # validation, unlabelled
-    X_val, X_unlab, y_val, y_unlab = train_test_split(X_remain, y_remain, train_size=val_missing)
+    X_val, X_unlab, y_val, y_unlab = train_test_split(X_remain, y_remain, train_size=val_missing, random_state=42)
     X_lab, y_lab = np.append(X_lab, X_train[_labeled], 0), np.append(y_lab, y_train[_labeled], 0)
     X_val, y_val = np.append(X_val, X_train[_validation], 0), np.append(y_val, y_train[_validation], 0)
 
@@ -67,9 +67,11 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
     unlab_accs = []
     val_accs = []
     test_accs = []
+    raw_results = []
+    targets = []
     train_time = []
     
-    data, label = shuffle(data, label)
+    data, label = shuffle(data, label, random_state=42)
     # Cross-validation split
     for i in range(n_reps):
         ss = ShuffleSplit(n_splits=4, test_size=T, random_state=42)
@@ -96,10 +98,12 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
             t = time()
             model.train(X_train, y_train, n_class)
             train_time.append(time() - t)
-            unlab_acc, unlab_pred = model.eval(X_unlab, y_unlab)
+            unlab_acc, unlab_pred, _ = model.eval(X_unlab, y_unlab)
+            unlab_pred = np.argmax(unlab_pred, axis=1)
             # print('Unlabelled Accuracy: ', unlab_acc)
             unlab_accs.append(unlab_acc)
             # retrain on y_lab and unlab prediction, eval on val set
+
             new_X_train, new_y_train = np.vstack([X_lab, X_unlab]), np.append(y_lab, unlab_pred, 0)
             if model_class in [RVFL, DeepRVFL, EnsembleDeepRVFL]:
                 model = model_class(n_node, lam, w_range, b_range, n_layer, activation=activation)
@@ -110,12 +114,14 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
             t = time()
             model.train(new_X_train, new_y_train, n_class)
             train_time.append(time() - t)
-            val_acc, _ = model.eval(X_val, y_val)
+            val_acc, _, _ = model.eval(X_val, y_val)
             val_accs.append(val_acc)
 
-            test_acc, _ = model.eval(X_test, y_test)
+            test_acc, raw, target = model.eval(X_test, y_test)
             # print('Test accuracy: ', test_acc)val_acc
             test_accs.append(test_acc)
+            raw_results.append(raw)
+            targets.append(label)
 
     # find average acc
     mean_unlab_acc = np.mean(unlab_accs), np.std(unlab_accs)
@@ -125,7 +131,7 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
     # print('Validation Accuracy', mean_val_acc)
     # print('Test accuracy: ', mean_test_acc)
 
-    return mean_unlab_acc, mean_val_acc, mean_test_acc, mean_train_time
+    return mean_unlab_acc, mean_val_acc, mean_test_acc, mean_train_time, raw_results, target
 
 def run_fast(data, label, n_class, partition, NN):
     run_ELM(data, label, n_class, partition)

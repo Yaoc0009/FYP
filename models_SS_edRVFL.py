@@ -27,7 +27,7 @@ class Model:
             return (x - self.data_mean) / self.data_std
         
     def softmax(self, x):
-        return np.exp(x - np.max(x)) / np.repeat((np.sum(np.exp(x-np.max(x)), axis=1))[:, np.newaxis], len(x[0]), axis=1)
+        return np.exp(x) / np.repeat((np.sum(np.exp(x), axis=1))[:, np.newaxis], len(x[0]), axis=1)
 
     def beta_function(self, d, L, C0, lam, y, label, label_proportions):
         # number of samples per class label
@@ -236,9 +236,10 @@ class DeepRVFL(Model):
         assert len(data) == len(label)
         assert len(label.shape) == 1
         
-        result = self.predict(data, False)
+        raw = self.predict(data, True)
+        result = np.argmax(raw, axis=1)
         acc = np.sum(np.equal(result, label))/len(label)
-        return acc, result
+        return acc, raw, label
 
     def standardize(self, x, index):
         if self.same_feature is True:
