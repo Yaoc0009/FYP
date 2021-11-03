@@ -41,10 +41,14 @@ def partition_data(X_train, y_train, partition):
     lab_missing = L - len(_labeled)
     val_missing = V - len(_validation)
     # labeled
-    X_lab, X_remain, y_lab, y_remain = train_test_split(X_train[remaining], y_train[remaining], train_size=lab_missing)
+    if lab_missing <= 0:
+        X_lab, y_lab = X_train[_labeled], y_train[_labeled]
+        X_remain, y_remain = X_train[remaining], y_train[remaining]
+    else:
+        X_lab, X_remain, y_lab, y_remain = train_test_split(X_train[remaining], y_train[remaining], train_size=lab_missing)
+        X_lab, y_lab = np.append(X_lab, X_train[_labeled], 0), np.append(y_lab, y_train[_labeled], 0)
     # validation, unlabelled
     X_val, X_unlab, y_val, y_unlab = train_test_split(X_remain, y_remain, train_size=val_missing)
-    X_lab, y_lab = np.append(X_lab, X_train[_labeled], 0), np.append(y_lab, y_train[_labeled], 0)
     X_val, y_val = np.append(X_val, X_train[_validation], 0), np.append(y_val, y_train[_validation], 0)
 
     assert len(X_lab) == L
@@ -91,8 +95,8 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
                 L = laplacian(X_lab, X_unlab, NN, sigma=2)
                 model = model_class(n_node, lam, w_range, b_range, NN, L, n_layer, activation=activation)
                 X_train, y_train = np.vstack([X_lab, X_unlab]), np.append(y_lab, [False]*len(y_unlab), 0)
-            elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL]:
-                model = model_class(n_node, lam, w_range, b_range, n_layer, tol=10**(-3), activation=activation)
+            # elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL]:
+            #     model = model_class(n_node, lam, w_range, b_range, n_layer, tol=10**(-3), activation=activation)
             t = time()
             model.train(X_train, y_train, n_class)
             train_time.append(time() - t)
@@ -105,8 +109,8 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
                 model = model_class(n_node, lam, w_range, b_range, n_layer, activation=activation)
             elif model_class in [LapRVFL, LapDeepRVFL, LapEnsembleDeepRVFL]:
                 model = model_class(n_node, lam, w_range, b_range, NN, L, n_layer, activation=activation)
-            elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL]:
-                model = model_class(n_node, lam, w_range, b_range, n_layer, tol=10**(-5), activation=activation)
+            # elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL]:
+            #     model = model_class(n_node, lam, w_range, b_range, n_layer, tol=10**(-5), activation=activation)
             t = time()
             model.train(new_X_train, new_y_train, n_class)
             train_time.append(time() - t)
@@ -225,35 +229,35 @@ def run_edRVFL(data, label, n_class, partition):
     print('Lambda: ', opt_lam)
     print('Train time: ', t[max_index])
 
-def run_BRVFL(data, label, n_class, partition):
-    print('running Bayesian RVFL...')
-    model_class = BRVFL
-    unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition)
+# def run_BRVFL(data, label, n_class, partition):
+#     print('running Bayesian RVFL...')
+#     model_class = BRVFL
+#     unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition)
 
-    print('Unlab: ', unlab_acc[0], u"\u00B1", unlab_acc[1])
-    print('Val: ', val_acc[0], u"\u00B1", val_acc[1])
-    print('Test: ', test_acc[0], u"\u00B1", test_acc[1])
-    print('Train time: ', train_time)
+#     print('Unlab: ', unlab_acc[0], u"\u00B1", unlab_acc[1])
+#     print('Val: ', val_acc[0], u"\u00B1", val_acc[1])
+#     print('Test: ', test_acc[0], u"\u00B1", test_acc[1])
+#     print('Train time: ', train_time)
 
-def run_BdRVFL(data, label, n_class, partition):
-    print('running Bayesian Deep RVFL...')
-    model_class = BDeepRVFL
-    unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, n_layer=10)
+# def run_BdRVFL(data, label, n_class, partition):
+#     print('running Bayesian Deep RVFL...')
+#     model_class = BDeepRVFL
+#     unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, n_layer=10)
 
-    print('Unlab: ', unlab_acc[0], u"\u00B1", unlab_acc[1])
-    print('Val: ', val_acc[0], u"\u00B1", val_acc[1])
-    print('Test: ', test_acc[0], u"\u00B1", test_acc[1])
-    print('Train time: ', train_time)
+#     print('Unlab: ', unlab_acc[0], u"\u00B1", unlab_acc[1])
+#     print('Val: ', val_acc[0], u"\u00B1", val_acc[1])
+#     print('Test: ', test_acc[0], u"\u00B1", test_acc[1])
+#     print('Train time: ', train_time)
 
-def run_BedRVFL(data, label, n_class, partition):
-    print('running Bayesian Ensemble Deep RVFL...')
-    model_class = BEnsembleDeepRVFL
-    unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, n_layer=10)
+# def run_BedRVFL(data, label, n_class, partition):
+#     print('running Bayesian Ensemble Deep RVFL...')
+#     model_class = BEnsembleDeepRVFL
+#     unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, n_layer=10)
 
-    print('Unlab: ', unlab_acc[0], u"\u00B1", unlab_acc[1])
-    print('Val: ', val_acc[0], u"\u00B1", val_acc[1])
-    print('Test: ', test_acc[0], u"\u00B1", test_acc[1])
-    print('Train time: ', train_time)
+#     print('Unlab: ', unlab_acc[0], u"\u00B1", unlab_acc[1])
+#     print('Val: ', val_acc[0], u"\u00B1", val_acc[1])
+#     print('Test: ', test_acc[0], u"\u00B1", test_acc[1])
+#     print('Train time: ', train_time)
 
 def run_LapELM(data, label, n_class, partition, NN):
     print('running Laplacian ELM...')

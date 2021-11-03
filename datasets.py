@@ -10,7 +10,7 @@ def coil20():
 
 def coil20b():
     dataset = loadmat('./coil20.mat')
-    label = np.array([dataset['Y'][i][0] % 2 for i in range(len(dataset['Y']))])
+    label = np.array([dataset['Y'][i][0] // 5 for i in range(len(dataset['Y']))])
     data = dataset['X']
     n_class = len(np.unique(label))
     return data, label, n_class
@@ -31,7 +31,7 @@ def uspst():
 
 def uspstb():
     dataset = loadmat('./uspst.mat')
-    label = np.array([dataset['y'][i][0] % 2 for i in range(len(dataset['y']))])
+    label = np.array([dataset['y'][i][0] // 5 for i in range(len(dataset['y']))])
     data = dataset['X']
     n_class = len(np.unique(label))
     return data, label, n_class
@@ -49,6 +49,6 @@ def uspsb():
     dataset = np.concatenate((dataset['uspstrain'], dataset['uspstest']))
     data = dataset[:, 1:]
     label = dataset[:, 0].astype(np.uint8)
-    label = np.array(label[i] % 2 for i in range(len(label)))
+    label = np.array(label[i] // 5 for i in range(len(label)))
     n_class = len(np.unique(label))
     return data, label, n_class

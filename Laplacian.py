@@ -1,9 +1,7 @@
 import numpy as np
-from scipy.io import loadmat
 from scipy import sparse
 from scipy.sparse import spdiags, eye
-from sklearn.neighbors import NearestNeighbors, kneighbors_graph
-import matplotlib.pyplot as plt
+from sklearn.neighbors import kneighbors_graph
 
 # calculates normalized Laplacian
 def adjacency(data, n_neighbors, sigma):
