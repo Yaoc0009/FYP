@@ -89,6 +89,7 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
             X_lab, y_lab, X_unlab, y_unlab, X_val, y_val = partition_data(X_train, y_train, partition)
             # predict unlabelled dataset
             X_train, y_train = X_lab, y_lab
+            t = time()
             if model_class in [ELM, RVFL, DeepRVFL, EnsembleDeepRVFL]:
                 model = model_class(n_node, lam, w_range, b_range, n_layer, activation=activation)
             elif model_class in [LapELM, LapRVFL, LapDeepRVFL, LapEnsembleDeepRVFL]:
@@ -97,7 +98,6 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
                 X_train, y_train = np.vstack([X_lab, X_unlab]), np.append(y_lab, [False]*len(y_unlab), 0)
             # elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL]:
             #     model = model_class(n_node, lam, w_range, b_range, n_layer, tol=10**(-3), activation=activation)
-            t = time()
             model.train(X_train, y_train, n_class)
             train_time.append(time() - t)
             unlab_acc, unlab_pred = model.eval(X_unlab, y_unlab)

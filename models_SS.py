@@ -36,7 +36,7 @@ class Model:
         for i, class_num in enumerate(label):
             C[i, i] = float(C0)/label_proportions[class_num]
         # More labeled examples than hidden neurons
-        if n_sample > (self.n_node + n_feature):
+        if n_sample > n_feature:
             I = np.identity(n_feature)
             inv_arg = I + np.linalg.multi_dot([d.T, C, d]) + lam * np.linalg.multi_dot([d.T, L, d])
             beta = np.linalg.multi_dot([np.linalg.inv(inv_arg), d.T, C, y])
@@ -64,7 +64,7 @@ class Activation:
 class ELM(Model):
     """ ELM Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, n_layer=1, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, n_layer=1, activation='sigmoid', same_feature=True):
         self.n_node = n_node
         self.n_layer = n_layer
         self.lam = lam
@@ -91,10 +91,9 @@ class ELM(Model):
         self.bias = (self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0]
         
         d = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
         # Minimize training complexity
-        if n_sample > (self.n_node + n_feature):
+        if n_sample > self.n_node:
             self.beta = (np.linalg.inv(self.lam * np.identity(d.shape[1]) + np.dot(d.T, d))).dot(d.T).dot(y)
         else:
             self.beta = d.T.dot(np.linalg.inv(self.lam * np.identity(n_sample) + np.dot(d, d.T))).dot(y)
@@ -102,7 +101,6 @@ class ELM(Model):
     def predict(self, data, raw_output=False):
         data = self.standardize(data) # Normalize
         d = self.activation_function(np.dot(data, self.weight) + self.bias)
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -120,7 +118,7 @@ class ELM(Model):
 class RVFL(Model):
     """ RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, n_layer=1, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, n_layer=1, activation='sigmoid', same_feature=True):
         self.n_node = n_node
         self.n_layer = n_layer
         self.lam = lam
@@ -148,10 +146,9 @@ class RVFL(Model):
         
         h = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
         d = np.concatenate([h, data], axis=1)
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
         # Minimize training complexity
-        if n_sample > (self.n_node + n_feature):
+        if n_sample > len(d[0]):
             self.beta = (np.linalg.inv(self.lam * np.identity(d.shape[1]) + np.dot(d.T, d))).dot(d.T).dot(y)
         else:
             self.beta = d.T.dot(np.linalg.inv(self.lam * np.identity(n_sample) + np.dot(d, d.T))).dot(y)
@@ -160,7 +157,6 @@ class RVFL(Model):
         data = self.standardize(data) # Normalize
         h = self.activation_function(np.dot(data, self.weight) + self.bias)
         d = np.concatenate([h, data], axis=1)
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -178,7 +174,7 @@ class RVFL(Model):
 class DeepRVFL(Model):
     """ Deep RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=True):
         self.n_node = n_node
         self.lam = lam
         self.w_range = w_range
@@ -208,10 +204,9 @@ class DeepRVFL(Model):
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, d], axis=1)
 
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
         # Minimize training complexity
-        if n_sample > (self.n_node + n_feature):
+        if n_sample > len(d[0]):
             self.beta = np.linalg.inv((self.lam * np.identity(d.shape[1]) + np.dot(d.T, d))).dot(d.T).dot(y)
         else:
             self.beta = d.T.dot(np.linalg.inv(self.lam * np.identity(n_sample) + np.dot(d, d.T))).dot(y)
@@ -225,7 +220,6 @@ class DeepRVFL(Model):
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, d], axis=1)
 
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -257,7 +251,7 @@ class DeepRVFL(Model):
 class EnsembleDeepRVFL(Model):
     """ Ensemble Deep RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, n_layer, activation='sigmoid', same_feature=True):
         self.n_node = n_node
         self.lam = lam
         self.w_range = w_range
@@ -288,10 +282,9 @@ class EnsembleDeepRVFL(Model):
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, data], axis=1)
             h = d
-            d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
 
             # Minimize training complexity
-            if n_sample > (self.n_node + n_feature):
+            if n_sample > len(d[0]):
                 self.beta.append(np.linalg.inv((self.lam * np.identity(d.shape[1]) + np.dot(d.T, d))).dot(d.T).dot(y))
             else:
                 self.beta.append(d.T.dot(np.linalg.inv(self.lam * np.identity(n_sample) + np.dot(d, d.T))).dot(y))
@@ -306,7 +299,6 @@ class EnsembleDeepRVFL(Model):
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, data], axis=1)
             h = d
-            d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
 
             if not raw_output:
                 results.append(np.argmax(np.dot(d, self.beta[i]), axis=1))
@@ -343,7 +335,7 @@ class EnsembleDeepRVFL(Model):
 
 class LapELM(Model):
     """ Laplacian ELM Classifier """
-    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer=1, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer=1, activation='sigmoid', same_feature=True):
         self.n_node = n_node
         self.n_layer = n_layer
         self.NN = NN
@@ -373,7 +365,6 @@ class LapELM(Model):
         self.bias = (self.b_range[1] - self.b_range[0]) * np.random.random([1, self.n_node]) + self.b_range[0]
         
         d = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
         label_proportions = np.sum(y, axis=0)
         assert sum(label_proportions) == len(label)
@@ -382,7 +373,6 @@ class LapELM(Model):
     def predict(self, data, raw_output=False):
         data = self.standardize(data) # Normalize
         d = self.activation_function(np.dot(data, self.weight) + self.bias)
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -399,7 +389,7 @@ class LapELM(Model):
 
 class LapRVFL(Model):
     """ Laplacian RVFL Classifier """
-    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer=1, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer=1, activation='sigmoid', same_feature=True):
         self.n_node = n_node
         self.n_layer = n_layer
         self.NN = NN
@@ -430,7 +420,6 @@ class LapRVFL(Model):
         
         h = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
         d = np.concatenate([h, data], axis=1)
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
         label_proportions = np.sum(y, axis=0)
         assert sum(label_proportions) == len(label)
@@ -440,7 +429,6 @@ class LapRVFL(Model):
         data = self.standardize(data) # Normalize
         h = self.activation_function(np.dot(data, self.weight) + self.bias)
         d = np.concatenate([h, data], axis=1)
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -458,7 +446,7 @@ class LapRVFL(Model):
 class LapDeepRVFL(Model):
     """ Laplacian Deep RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer, activation='sigmoid', same_feature=True):
         self.n_node = n_node
         self.NN = NN
         self.L = L
@@ -491,7 +479,6 @@ class LapDeepRVFL(Model):
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, d], axis=1)
 
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
         y = self.one_hot_encoding(label, n_class)
         label_proportions = np.sum(y, axis=0)
         assert sum(label_proportions) == len(label)
@@ -506,7 +493,6 @@ class LapDeepRVFL(Model):
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, d], axis=1)
 
-        d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
         result = self.softmax(np.dot(d, self.beta))
         if not raw_output:
             result = np.argmax(result, axis=1)
@@ -538,7 +524,7 @@ class LapDeepRVFL(Model):
 class LapEnsembleDeepRVFL(Model):
     """ Laplacian Ensemble Deep RVFL Classifier """
     
-    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer, activation='sigmoid', same_feature=False):
+    def __init__(self, n_node, lam, w_range, b_range, NN, L, n_layer, activation='sigmoid', same_feature=True):
         self.n_node = n_node
         self.NN = NN
         self.L = L
@@ -574,7 +560,6 @@ class LapEnsembleDeepRVFL(Model):
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, data], axis=1)
             h = d
-            d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
             self.beta.append(self.beta_function(d, self.L, self.C0, self.lam, y, label, label_proportions))
             
     def predict(self, data, raw_output=False):
@@ -587,7 +572,6 @@ class LapEnsembleDeepRVFL(Model):
             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
             d = np.concatenate([h, data], axis=1)
             h = d
-            d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
 
             if not raw_output:
                 results.append(np.argmax(np.dot(d, self.beta[i]), axis=1))
@@ -625,7 +609,7 @@ class LapEnsembleDeepRVFL(Model):
 # class BRVFL2(Model):
 #     """ BRVFL Classifier """
 
-#     def __init__(self, n_node, prec, w_range, b_range, n_layer=1, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-3), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
+#     def __init__(self, n_node, prec, w_range, b_range, n_layer=1, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-3), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=True):
 #         self.n_node = n_node
 #         self.w_range = w_range
 #         self.b_range = b_range
@@ -661,7 +645,6 @@ class LapEnsembleDeepRVFL(Model):
         
 #         h = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
 #         d = np.concatenate([h, data], axis=1)
-#         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
 #         y = self.one_hot_encoding(label, n_class)
 #         dT_y = np.dot(d.T, y)
 #         dT_d = np.dot(d.T, d)
@@ -712,7 +695,6 @@ class LapEnsembleDeepRVFL(Model):
 #         data = self.standardize(data) # Normalize
 #         h = self.activation_function(np.dot(data, self.weight) + self.bias)
 #         d = np.concatenate([h, data], axis=1)
-#         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)  
 #         result = self.softmax(np.dot(d, self.beta))
 #         if not raw_output:
 #             result = np.argmax(result, axis=1)
@@ -730,7 +712,7 @@ class LapEnsembleDeepRVFL(Model):
 # class BRVFL(Model):
 #     """ BRVFL Classifier """
 
-#     def __init__(self, n_node, w_range, b_range, n_layer=1, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
+#     def __init__(self, n_node, w_range, b_range, n_layer=1, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=True):
 #         self.n_node = n_node
 #         self.w_range = w_range
 #         self.b_range = b_range
@@ -766,7 +748,6 @@ class LapEnsembleDeepRVFL(Model):
         
 #         h = self.activation_function(np.dot(data, self.weight) + np.dot(np.ones([n_sample, 1]), self.bias))
 #         d = np.concatenate([h, data], axis=1)
-#         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
 #         y = self.one_hot_encoding(label, n_class)
 #         dT_y = np.dot(d.T, y)
 #         dT_d = np.dot(d.T, d)
@@ -816,7 +797,6 @@ class LapEnsembleDeepRVFL(Model):
 #         data = self.standardize(data) # Normalize
 #         h = self.activation_function(np.dot(data, self.weight) + self.bias)
 #         d = np.concatenate([h, data], axis=1)
-#         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
 #         result = self.softmax(np.dot(d, self.beta))
 #         if not raw_output:
 #             result = np.argmax(result, axis=1)
@@ -834,7 +814,7 @@ class LapEnsembleDeepRVFL(Model):
 # class BDeepRVFL(Model):
 #     """ Bayesian Deep RVFL Classifier """
 
-#     def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
+#     def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=True):
 #         self.n_node = n_node
 #         self.w_range = w_range
 #         self.b_range = b_range
@@ -873,7 +853,6 @@ class LapEnsembleDeepRVFL(Model):
 #             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
 #             d = np.concatenate([h, d], axis=1)
 
-#         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
 #         y = self.one_hot_encoding(label, n_class)
 #         dT_y = np.dot(d.T, y)
 #         dT_d = np.dot(d.T, d)
@@ -928,7 +907,6 @@ class LapEnsembleDeepRVFL(Model):
 #             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
 #             d = np.concatenate([h, d], axis=1)
 
-#         d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1)
 #         result = self.softmax(np.dot(d, self.beta))
 #         if not raw_output:
 #             result = np.argmax(result, axis=1)
@@ -960,7 +938,7 @@ class LapEnsembleDeepRVFL(Model):
 # class BEnsembleDeepRVFL(Model):
 #     """ Bayesian Deep RVFL Classifier """
 
-#     def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=False):
+#     def __init__(self, n_node, w_range, b_range, n_layer, alpha_1=10**(-5), alpha_2=10**(-5), alpha_3=10**(-5), alpha_4=10**(-5), n_iter=1000, tol=1.0e-3, activation='sigmoid', same_feature=True):
 #         self.n_node = n_node
 #         self.w_range = w_range
 #         self.b_range = b_range
@@ -1000,7 +978,6 @@ class LapEnsembleDeepRVFL(Model):
 #             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
 #             d = np.concatenate([h, data], axis=1)
 #             h = d
-#             d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
 
 #             dT_y = np.dot(d.T, y)
 #             dT_d = np.dot(d.T, d)
@@ -1061,7 +1038,6 @@ class LapEnsembleDeepRVFL(Model):
 #             h = self.activation_function(np.dot(h, self.weight[i]) + np.dot(np.ones([n_sample, 1]), self.bias[i]))
 #             d = np.concatenate([h, data], axis=1)
 #             h = d
-#             d = np.concatenate([d, np.ones_like(d[:, 0:1])], axis=1) # concat column of 1s
 
 #             if not raw_output:
 #                 results.append(np.argmax(np.dot(d, self.beta[i]), axis=1))
