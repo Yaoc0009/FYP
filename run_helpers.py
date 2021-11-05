@@ -1,7 +1,7 @@
 from sklearn.model_selection import KFold
 import numpy as np
-from models import *
-from models_MR import *
+from models_SS import *
+from Laplacian import *
 from time import time
 from IPython.display import clear_output
 
@@ -26,10 +26,11 @@ def cross_val_acc(data, label, n_class, model_class, lam=None, n_layer=1, activa
         train_index, val_index = kf_values
         X_val_train, X_val_test = data[train_index], data[val_index]
         y_val_train, y_val_test = label[train_index], label[val_index]
-        if model_class in [RVFL, DeepRVFL, EnsembleDeepRVFL, LapRVFL, LapDeepRVFL, LapEnsembleDeepRVFL]:
+        if model_class in [ELM, RVFL, DeepRVFL, EnsembleDeepRVFL]:
             model = model_class(n_node, lam, w_range, b_range, n_layer, activation=activation)
-        elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL, LapBRVFL, LapBDeepRVFL, LapBEnsembleDeepRVFL]:
-            model = model_class(n_node, w_range, b_range, n_layer, tol=10**(-7), activation=activation)
+        elif model_class in [LapELM, LapRVFL, LapDeepRVFL, LapEnsembleDeepRVFL]:
+            L = laplacian(X_val_train, None, 50, sigma=17.5)
+            model = model_class(n_node, lam, w_range, b_range, NN, L, n_layer, activation=activation)
         t = time()
         model.train(X_val_train, y_val_train, n_class)
         train_t = time()

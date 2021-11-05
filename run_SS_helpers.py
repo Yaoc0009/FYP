@@ -49,6 +49,7 @@ def partition_data(X_train, y_train, partition):
         X_lab, y_lab = np.append(X_lab, X_train[_labeled], 0), np.append(y_lab, y_train[_labeled], 0)
     # validation, unlabelled
     X_val, X_unlab, y_val, y_unlab = train_test_split(X_remain, y_remain, train_size=val_missing)
+    X_unlab, y_unlab = X_unlab[:U], y_unlab[:U]
     X_val, y_val = np.append(X_val, X_train[_validation], 0), np.append(y_val, y_train[_validation], 0)
 
     assert len(X_lab) == L
@@ -66,7 +67,7 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
 
     n_node = 2000 # num of nodes in hidden layer
     w_range = [-1, 1] # range of random weights
-    b_range = [0, 1] # range of random biases
+    b_range = [-1, 1] # range of random biases
 
     unlab_accs = []
     val_accs = []
@@ -120,6 +121,7 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
             test_acc, _ = model.eval(X_test, y_test)
             # print('Test accuracy: ', test_acc)val_acc
             test_accs.append(test_acc)
+        break
 
     # find average acc
     mean_unlab_acc = np.mean(unlab_accs), np.std(unlab_accs)
