@@ -110,9 +110,9 @@ def run_SS(dataset, model_class, lam=1, n_layer=1, activation='sigmoid'):
             if model_class in [ELM, RVFL, DeepRVFL, EnsembleDeepRVFL]:
                 model = model_class(n_node, lam, w_range, b_range, n_layer, activation=activation)
             elif model_class in [LapELM, LapRVFL, LapDeepRVFL, LapEnsembleDeepRVFL]:
+                X_train, y_train = np.vstack([X_lab, X_unlab]), np.append(y_lab, [False]*len(y_unlab), 0)
                 L = laplacian(X_lab, X_unlab, NN, sigma=2)
                 model = model_class(n_node, lam, w_range, b_range, NN, L, n_layer, activation=activation)
-                X_train, y_train = np.vstack([X_lab, X_unlab]), np.append(y_lab, [False]*len(y_unlab), 0)
             # elif model_class in [BRVFL, BDeepRVFL, BEnsembleDeepRVFL]:
             #     model = model_class(n_node, lam, w_range, b_range, n_layer, tol=10**(-3), activation=activation)
             model.train(X_train, y_train, n_class)

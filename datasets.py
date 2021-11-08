@@ -10,7 +10,7 @@ def coil20():
 
 def coil20b():
     dataset = loadmat('./coil20.mat')
-    label = np.array([dataset['Y'][i][0] // 5 for i in range(len(dataset['Y']))])
+    label = np.array([(dataset['Y'][i][0]-1) // 10 for i in range(len(dataset['Y']))])
     data = dataset['X']
     n_class = len(np.unique(label))
     return data, label, n_class
