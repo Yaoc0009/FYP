@@ -2,6 +2,7 @@ from sklearn.model_selection import train_test_split, ShuffleSplit
 from sklearn.utils import shuffle
 import numpy as np
 from models_SS import *
+from datasets import *
 from time import time
 from Laplacian import laplacian
 
@@ -61,13 +62,28 @@ def partition_data(X_train, y_train, partition):
 
     return X_lab, y_lab, X_unlab, y_unlab, X_val, y_val
 
-def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer=1, activation='sigmoid'):
-    L, U, V, T = partition[0], partition[1], partition[2], partition[3]
-    n_reps = 3
-
+def run_SS(dataset, model_class, lam=1, n_layer=1, activation='sigmoid'):
+    n_reps = 1
     n_node = 2000 # num of nodes in hidden layer
     w_range = [-1, 1] # range of random weights
     b_range = [-1, 1] # range of random biases
+
+    if dataset == g50c:
+        NN = 50
+        # sigma = 17.5
+        partition = [50, 314, 50, 136]
+    elif dataset in [coil20b, coil20]:
+        NN = 2
+        # sigma = 0.6
+        partition = [40, 1000, 40, 360]
+    elif dataset in [uspstb, uspst]:
+        NN = 15
+        # sigma = 9.4
+        partition = [50, 1409, 50, 498]
+    else:
+        return 0
+
+    data, label, n_class = dataset()
 
     unlab_accs = []
     val_accs = []
@@ -77,14 +93,14 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
     data, label = shuffle(data, label)
     # Cross-validation split
     for i in range(n_reps):
-        ss = ShuffleSplit(n_splits=4, test_size=T, random_state=42)
+        ss = ShuffleSplit(n_splits=4, test_size=partition[3], random_state=42)
         for i, ss_values in enumerate(ss.split(data, label)):
             train_index, test_index = ss_values
             X_train, X_test = data[train_index], data[test_index]
             y_train, y_test = label[train_index], label[test_index]
 
-            assert len(X_test) == T
-            assert len(y_test) == T
+            assert len(X_test) == partition[3]
+            assert len(y_test) == partition[3]
 
             # partition data to labelled, unlabelled, validation
             X_lab, y_lab, X_unlab, y_unlab, X_val, y_val = partition_data(X_train, y_train, partition)
@@ -133,17 +149,17 @@ def run_SS(data, label, n_class, model_class, partition, NN=None, lam=1, n_layer
 
     return mean_unlab_acc, mean_val_acc, mean_test_acc, mean_train_time
 
-def run_fast(data, label, n_class, partition, NN):
-    run_ELM(data, label, n_class, partition)
-    run_RVFL(data, label, n_class, partition)
-    run_dRVFL(data, label, n_class, partition)
-    run_edRVFL(data, label, n_class, partition)
-    run_LapELM(data, label, n_class, partition, NN)
-    run_LapRVFL(data, label, n_class, partition, NN)
-    run_LapdRVFL(data, label, n_class, partition, NN)
-    run_LapedRVFL(data, label, n_class, partition, NN)
+def run_all(dataset):
+    run_ELM(dataset)
+    run_RVFL(dataset)
+    run_dRVFL(dataset)
+    run_edRVFL(dataset)
+    run_LapELM(dataset)
+    run_LapRVFL(dataset)
+    run_LapdRVFL(dataset)
+    run_LapedRVFL(dataset)
 
-def run_ELM(data, label, n_class, partition):
+def run_ELM(dataset):
     print('running ELM...')
     model_class = ELM
     unlab = []
@@ -151,7 +167,7 @@ def run_ELM(data, label, n_class, partition):
     test = []
     t = []
     for i, lam in enumerate(lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, lam=lam, n_layer=1, activation='sigmoid')
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=1, activation='sigmoid')
         unlab.append(unlab_acc)
         val.append(val_acc)
         test.append(test_acc)
@@ -165,7 +181,7 @@ def run_ELM(data, label, n_class, partition):
     print('Lambda: ', opt_lam)
     print('Train time: ', t[max_index])
 
-def run_RVFL(data, label, n_class, partition):
+def run_RVFL(dataset):
     print('running RVFL...')
     model_class = RVFL
     unlab = []
@@ -173,7 +189,7 @@ def run_RVFL(data, label, n_class, partition):
     test = []
     t = []
     for i, lam in enumerate(lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, lam=lam, n_layer=1, activation='sigmoid')
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=1, activation='sigmoid')
         unlab.append(unlab_acc)
         val.append(val_acc)
         test.append(test_acc)
@@ -187,7 +203,7 @@ def run_RVFL(data, label, n_class, partition):
     print('Lambda: ', opt_lam)
     print('Train time: ', t[max_index])
 
-def run_dRVFL(data, label, n_class, partition):
+def run_dRVFL(dataset):
     print('running Deep RVFL...')
     model_class = DeepRVFL
     unlab = []
@@ -195,7 +211,7 @@ def run_dRVFL(data, label, n_class, partition):
     test = []
     t = []
     for i, lam in enumerate(lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, lam=lam, n_layer=10, activation='sigmoid')
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=10, activation='sigmoid')
         unlab.append(unlab_acc)
         val.append(val_acc)
         test.append(test_acc)
@@ -209,7 +225,7 @@ def run_dRVFL(data, label, n_class, partition):
     print('Lambda: ', opt_lam)
     print('Train time: ', t[max_index])
 
-def run_edRVFL(data, label, n_class, partition):
+def run_edRVFL(dataset):
     print('running Ensemble Deep RVFL...')
     model_class = EnsembleDeepRVFL
     unlab = []
@@ -217,7 +233,7 @@ def run_edRVFL(data, label, n_class, partition):
     test = []
     t = []
     for i, lam in enumerate(lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, lam=lam, n_layer=10, activation='sigmoid')
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=10, activation='sigmoid')
         unlab.append(unlab_acc)
         val.append(val_acc)
         test.append(test_acc)
@@ -261,7 +277,7 @@ def run_edRVFL(data, label, n_class, partition):
 #     print('Test: ', test_acc[0], u"\u00B1", test_acc[1])
 #     print('Train time: ', train_time)
 
-def run_LapELM(data, label, n_class, partition, NN):
+def run_LapELM(dataset):
     print('running Laplacian ELM...')
     model_class = LapELM
     unlab = []
@@ -269,7 +285,7 @@ def run_LapELM(data, label, n_class, partition, NN):
     test = []
     t = []
     for i, lam in enumerate(lap_lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, NN, lam=lam, n_layer=1, activation='sigmoid')
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=1, activation='sigmoid')
         unlab.append(unlab_acc)
         val.append(val_acc)
         test.append(test_acc)
@@ -283,7 +299,7 @@ def run_LapELM(data, label, n_class, partition, NN):
     print('Lambda: ', opt_lam)
     print('Train time: ', t[max_index])
 
-def run_LapRVFL(data, label, n_class, partition, NN):
+def run_LapRVFL(dataset):
     print('running Laplacian RVFL...')
     model_class = LapRVFL
     unlab = []
@@ -291,7 +307,7 @@ def run_LapRVFL(data, label, n_class, partition, NN):
     test = []
     t = []
     for i, lam in enumerate(lap_lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, NN, lam=lam, n_layer=1, activation='sigmoid')
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=1, activation='sigmoid')
         unlab.append(unlab_acc)
         val.append(val_acc)
         test.append(test_acc)
@@ -305,7 +321,7 @@ def run_LapRVFL(data, label, n_class, partition, NN):
     print('Lambda: ', opt_lam)
     print('Train time: ', t[max_index])
 
-def run_LapdRVFL(data, label, n_class, partition, NN):
+def run_LapdRVFL(dataset):
     print('running Laplacian Deep RVFL...')
     model_class = LapDeepRVFL
     unlab = []
@@ -313,7 +329,7 @@ def run_LapdRVFL(data, label, n_class, partition, NN):
     test = []
     t = []
     for i, lam in enumerate(lap_lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, NN, lam=lam, n_layer=10, activation='sigmoid')
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=10, activation='sigmoid')
         unlab.append(unlab_acc)
         val.append(val_acc)
         test.append(test_acc)
@@ -327,7 +343,7 @@ def run_LapdRVFL(data, label, n_class, partition, NN):
     print('Lambda: ', opt_lam)
     print('Train time: ', t[max_index])
 
-def run_LapedRVFL(data, label, n_class, partition, NN):
+def run_LapedRVFL(dataset):
     print('running Laplacian Ensemble Deep RVFL...')
     model_class = LapEnsembleDeepRVFL
     unlab = []
@@ -335,7 +351,7 @@ def run_LapedRVFL(data, label, n_class, partition, NN):
     test = []
     t = []
     for i, lam in enumerate(lap_lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(data, label, n_class, model_class, partition, NN, lam=lam, n_layer=10, activation='sigmoid')
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=10, activation='sigmoid')
         unlab.append(unlab_acc)
         val.append(val_acc)
         test.append(test_acc)
