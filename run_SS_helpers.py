@@ -140,14 +140,14 @@ def run_SS(dataset, model_class, lam=1, n_layer=1, activation='sigmoid'):
         break
 
     # find average acc
-    mean_unlab_acc = np.mean(unlab_accs), np.std(unlab_accs)
-    mean_val_acc = np.mean(val_accs), np.std(val_accs)
-    mean_test_acc = np.mean(test_accs), np.std(test_accs)
+    mean_unlab_acc = 1 - np.mean(unlab_accs), np.std(unlab_accs)
+    mean_val_acc = 1 - np.mean(val_accs), np.std(val_accs)
+    mean_test_acc = 1 - np.mean(test_accs), np.std(test_accs)
     mean_train_time = np.mean(train_time)
     # print('Validation Accuracy', mean_val_acc)
     # print('Test accuracy: ', mean_test_acc)
 
-    return mean_unlab_acc, mean_val_acc, mean_test_acc, mean_train_time
+    return mean_unlab_acc*100, mean_val_acc*100, mean_test_acc*100, mean_train_time
 
 def run_all(dataset):
     run_ELM(dataset)
@@ -173,7 +173,7 @@ def run_ELM(dataset):
         test.append(test_acc)
         t.append(train_time)
 
-    max_index = np.argmax(val, axis=0)[0]
+    max_index = np.argmin(val, axis=0)[0]
     opt_lam = lams[max_index]
     print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
     print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
@@ -195,7 +195,7 @@ def run_RVFL(dataset):
         test.append(test_acc)
         t.append(train_time)
 
-    max_index = np.argmax(val, axis=0)[0]
+    max_index = np.argmin(val, axis=0)[0]
     opt_lam = lams[max_index]
     print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
     print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
@@ -217,7 +217,7 @@ def run_dRVFL(dataset):
         test.append(test_acc)
         t.append(train_time)
 
-    max_index = np.argmax(val, axis=0)[0]
+    max_index = np.argmin(val, axis=0)[0]
     opt_lam = lams[max_index]
     print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
     print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
@@ -239,8 +239,96 @@ def run_edRVFL(dataset):
         test.append(test_acc)
         t.append(train_time)
 
-    max_index = np.argmax(val, axis=0)[0]
+    max_index = np.argmin(val, axis=0)[0]
     opt_lam = lams[max_index]
+    print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
+    print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
+    print('Test: ', test[max_index][0], u"\u00B1", test[max_index][1])
+    print('Lambda: ', opt_lam)
+    print('Train time: ', t[max_index])
+
+def run_LapELM(dataset):
+    print('running Laplacian ELM...')
+    model_class = LapELM
+    unlab = []
+    val = []
+    test = []
+    t = []
+    for i, lam in enumerate(lap_lams):
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=1, activation='sigmoid')
+        unlab.append(unlab_acc)
+        val.append(val_acc)
+        test.append(test_acc)
+        t.append(train_time)
+
+    max_index = np.argmin(val, axis=0)[0]
+    opt_lam = lap_lams[max_index]
+    print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
+    print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
+    print('Test: ', test[max_index][0], u"\u00B1", test[max_index][1])
+    print('Lambda: ', opt_lam)
+    print('Train time: ', t[max_index])
+
+def run_LapRVFL(dataset):
+    print('running Laplacian RVFL...')
+    model_class = LapRVFL
+    unlab = []
+    val = []
+    test = []
+    t = []
+    for i, lam in enumerate(lap_lams):
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=1, activation='sigmoid')
+        unlab.append(unlab_acc)
+        val.append(val_acc)
+        test.append(test_acc)
+        t.append(train_time)
+
+    max_index = np.argmin(val, axis=0)[0]
+    opt_lam = lap_lams[max_index]
+    print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
+    print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
+    print('Test: ', test[max_index][0], u"\u00B1", test[max_index][1])
+    print('Lambda: ', opt_lam)
+    print('Train time: ', t[max_index])
+
+def run_LapdRVFL(dataset):
+    print('running Laplacian Deep RVFL...')
+    model_class = LapDeepRVFL
+    unlab = []
+    val = []
+    test = []
+    t = []
+    for i, lam in enumerate(lap_lams):
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=10, activation='sigmoid')
+        unlab.append(unlab_acc)
+        val.append(val_acc)
+        test.append(test_acc)
+        t.append(train_time)
+
+    max_index = np.argmin(val, axis=0)[0]
+    opt_lam = lap_lams[max_index]
+    print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
+    print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
+    print('Test: ', test[max_index][0], u"\u00B1", test[max_index][1])
+    print('Lambda: ', opt_lam)
+    print('Train time: ', t[max_index])
+
+def run_LapedRVFL(dataset):
+    print('running Laplacian Ensemble Deep RVFL...')
+    model_class = LapEnsembleDeepRVFL
+    unlab = []
+    val = []
+    test = []
+    t = []
+    for i, lam in enumerate(lap_lams):
+        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=10, activation='sigmoid')
+        unlab.append(unlab_acc)
+        val.append(val_acc)
+        test.append(test_acc)
+        t.append(train_time)
+
+    max_index = np.argmin(val, axis=0)[0]
+    opt_lam = lap_lams[max_index]
     print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
     print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
     print('Test: ', test[max_index][0], u"\u00B1", test[max_index][1])
@@ -276,91 +364,3 @@ def run_edRVFL(dataset):
 #     print('Val: ', val_acc[0], u"\u00B1", val_acc[1])
 #     print('Test: ', test_acc[0], u"\u00B1", test_acc[1])
 #     print('Train time: ', train_time)
-
-def run_LapELM(dataset):
-    print('running Laplacian ELM...')
-    model_class = LapELM
-    unlab = []
-    val = []
-    test = []
-    t = []
-    for i, lam in enumerate(lap_lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=1, activation='sigmoid')
-        unlab.append(unlab_acc)
-        val.append(val_acc)
-        test.append(test_acc)
-        t.append(train_time)
-
-    max_index = np.argmax(val, axis=0)[0]
-    opt_lam = lap_lams[max_index]
-    print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
-    print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
-    print('Test: ', test[max_index][0], u"\u00B1", test[max_index][1])
-    print('Lambda: ', opt_lam)
-    print('Train time: ', t[max_index])
-
-def run_LapRVFL(dataset):
-    print('running Laplacian RVFL...')
-    model_class = LapRVFL
-    unlab = []
-    val = []
-    test = []
-    t = []
-    for i, lam in enumerate(lap_lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=1, activation='sigmoid')
-        unlab.append(unlab_acc)
-        val.append(val_acc)
-        test.append(test_acc)
-        t.append(train_time)
-
-    max_index = np.argmax(val, axis=0)[0]
-    opt_lam = lap_lams[max_index]
-    print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
-    print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
-    print('Test: ', test[max_index][0], u"\u00B1", test[max_index][1])
-    print('Lambda: ', opt_lam)
-    print('Train time: ', t[max_index])
-
-def run_LapdRVFL(dataset):
-    print('running Laplacian Deep RVFL...')
-    model_class = LapDeepRVFL
-    unlab = []
-    val = []
-    test = []
-    t = []
-    for i, lam in enumerate(lap_lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=10, activation='sigmoid')
-        unlab.append(unlab_acc)
-        val.append(val_acc)
-        test.append(test_acc)
-        t.append(train_time)
-
-    max_index = np.argmax(val, axis=0)[0]
-    opt_lam = lap_lams[max_index]
-    print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
-    print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
-    print('Test: ', test[max_index][0], u"\u00B1", test[max_index][1])
-    print('Lambda: ', opt_lam)
-    print('Train time: ', t[max_index])
-
-def run_LapedRVFL(dataset):
-    print('running Laplacian Ensemble Deep RVFL...')
-    model_class = LapEnsembleDeepRVFL
-    unlab = []
-    val = []
-    test = []
-    t = []
-    for i, lam in enumerate(lap_lams):
-        unlab_acc, val_acc, test_acc, train_time = run_SS(dataset, model_class, lam=lam, n_layer=10, activation='sigmoid')
-        unlab.append(unlab_acc)
-        val.append(val_acc)
-        test.append(test_acc)
-        t.append(train_time)
-
-    max_index = np.argmax(val, axis=0)[0]
-    opt_lam = lap_lams[max_index]
-    print('Unlab: ', unlab[max_index][0], u"\u00B1", unlab[max_index][1])
-    print('Val: ', val[max_index][0], u"\u00B1", val[max_index][1])
-    print('Test: ', test[max_index][0], u"\u00B1", test[max_index][1])
-    print('Lambda: ', opt_lam)
-    print('Train time: ', t[max_index])
