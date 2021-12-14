@@ -6,7 +6,6 @@ References: <br>
 2. Huang, Gao & Song, Shiji & Gupta, Jatinder & Wu, Cheng. (2014). Semi-Supervised and Unsupervised Extreme Learning Machines. IEEE Transactions on Cybernetics. 44. 1-1. 10.1109/TCYB.2014.2307349. 
 3. https://github.com/Xuyang-Huang/Simple-RVFL-python.git
 
-Most files are experimentation files - not functioning/irrelevant for now, will tidy up as the project progresses.<br>
 
 Roadmap:
 1. RVFL ✅
